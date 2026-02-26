@@ -1,0 +1,68 @@
+{
+  "Home (Minimal)": {
+    "keys": [
+      "chair_or_bench",
+      "open_floor",
+      "wall"
+    ],
+    "desc": "Your home setup with personal equipment"
+  },
+  "Commercial Gym": {
+    "keys": [
+      "stationary_bike",
+      "adjustable_dumbbell",
+      "bench_adjustable",
+      "barbell",
+      "bands_heavy",
+      "hack_squat",
+      "bands_light",
+      "dumbbells_light",
+      "assault_bike",
+      "foam_roller",
+      "kettlebell_light",
+      "seated_row",
+      "pull_up_bar",
+      "bands_medium",
+      "shoulder_press_mach",
+      "elliptical",
+      "treadmill",
+      "dumbbells_heavy",
+      "ab_wheel",
+      "bench_flat",
+      "dumbbells_medium",
+      "chest_fly_machine",
+      "squat_rack",
+      "lat_pulldown",
+      "leg_curl",
+      "stair_climber",
+      "cable_machine",
+      "kettlebell_heavy",
+      "stability_ball",
+      "dip_bars",
+      "open_floor",
+      "bands_loop",
+      "rowing_machine",
+      "leg_press",
+      "ab_crunch_machine",
+      "leg_extension",
+      "yoga_mat"
+    ],
+    "desc": "Full commercial gym with all equipment"
+  },
+  "Outdoor / Park": {
+    "keys": [
+      "open_floor",
+      "stairs",
+      "outdoor_park",
+      "wall"
+    ],
+    "desc": "Park, calisthenics area, or outdoor gym"
+  },
+  "Office / Desk Break": {
+    "keys": [
+      "chair_or_bench",
+      "wall"
+    ],
+    "desc": "No equipment, just your bodyweight and what's in the room"
+  }
+}

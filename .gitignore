@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+.kivy/
+.buildozer/
+bin/
+*.apk
+workout_progress.json
