@@ -1,7 +1,5 @@
 """
-FitForge - Full Body Workout App
-Mobile workout tracker with rest timers, audio cues, progress tracking, and exercise instructions.
-Built with Kivy for Android/iOS deployment.
+FitForge - Full Body Workout App v1.5.0
 """
 
 from kivy.app import App
@@ -17,222 +15,118 @@ from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.graphics import Color, RoundedRectangle, Rectangle
 from kivy.utils import get_color_from_hex
-from kivy.core.audio import SoundLoader  # reserved for future audio cues
+from kivy.core.audio import SoundLoader
 from kivy.metrics import dp, sp
 from kivy.properties import StringProperty
 import json
 import os
 import datetime
 
-# ─────────────────────────────────────────────
-# THEME
-# ─────────────────────────────────────────────
 COLORS = {
-    'bg':           '#0D0F14',
-    'surface':      '#161A24',
-    'surface2':     '#1E2433',
-    'accent':       '#E8FF47',
-    'accent2':      '#47FFD4',
-    'danger':       '#FF4757',
-    'text':         '#F0F4FF',
-    'text_dim':     '#7A8599',
-    'card':         '#1A1F2E',
-    'success':      '#2ECC71',
+    'bg':       '#0D0F14',
+    'surface':  '#161A24',
+    'surface2': '#1E2433',
+    'accent':   '#E8FF47',
+    'accent2':  '#47FFD4',
+    'danger':   '#FF4757',
+    'text':     '#F0F4FF',
+    'text_dim': '#7A8599',
+    'card':     '#1A1F2E',
+    'success':  '#2ECC71',
 }
 
 def c(key):
     return get_color_from_hex(COLORS[key])
 
-# ─────────────────────────────────────────────
-# WORKOUT DATA
-# ─────────────────────────────────────────────
+
 WORKOUT_PLAN = {
     "Day 1": {
-        "name": "Push + Core",
-        "emoji": "",
-        "color": "#E8FF47",
+        "name": "Push + Core", "color": "#E8FF47",
         "warmup": [
             {"name": "Jump Rope", "duration": 300, "type": "timed",
-             "instruction": "Easy pace, focus on rhythm. Land softly on the balls of your feet. Keep elbows close to your sides. This gets your heart rate up and primes the whole body."},
+             "instruction": "Easy pace, focus on rhythm. Land softly on the balls of your feet. Keep elbows close to your sides. Gets your heart rate up and primes the whole body."},
             {"name": "Arm Circles — Forward", "duration": 30, "type": "timed",
-             "instruction": "Arms straight out to the sides, make big slow forward circles. Progressively increase the circle size. Opens the shoulder joint before pressing work."},
+             "instruction": "Arms straight out, make big slow forward circles. Progressively wider. Opens the shoulder joint before pressing work."},
             {"name": "Arm Circles — Backward", "duration": 30, "type": "timed",
              "instruction": "Same motion, reverse direction. You'll feel the rear deltoid and rotator cuff engage. Keep your neck relaxed."},
             {"name": "Hip Circles", "reps": "10 each direction", "type": "reps",
-             "instruction": "Hands on hips, feet shoulder-width. Make big slow circles with your hips. Forward 10, then backward 10. Loosens the hip flexors and lower back."},
+             "instruction": "Hands on hips, feet shoulder-width. Big slow circles — forward 10, backward 10. Loosens hip flexors and lower back."},
             {"name": "Walkouts", "reps": "5 reps", "type": "reps",
-             "instruction": "Stand tall, hinge forward at the hips, walk your hands out to a plank position, hold 2 seconds, walk back and stand. Warms up shoulders, hamstrings, and core all at once."},
+             "instruction": "Hinge forward, walk hands to plank, hold 2 seconds, walk back. Warms up shoulders, hamstrings, and core all at once."},
             {"name": "Lateral Lunges", "reps": "10 per side", "type": "reps",
-             "instruction": "Step wide to the side, sink your hips down, reach the opposite arm across toward your foot. Hold 1 second at the bottom. Opens the groin and hip flexors."},
-            {"name": "Shoulder Rotations (Band)", "reps": "10 per direction", "type": "reps",
-             "instruction": "Hold a light resistance band wide with both hands, arms straight. Bring it overhead and behind your back if mobility allows. Reverse the motion. Directly primes the shoulder for pressing."},
+             "instruction": "Step wide, sink hips down, reach opposite arm across toward foot. Hold 1 second at bottom. Opens groin and hip flexors."},
+            {"name": "Shoulder Rotations", "reps": "10 per direction", "type": "reps",
+             "instruction": "Hold a band wide with both hands, arms straight. Bring overhead and behind back if mobility allows. Reverse. Primes shoulder for pressing."},
             {"name": "Push-Up Plank Hold", "duration": 20, "type": "timed",
-             "instruction": "Get into push-up position on the rotating handles or floor and simply hold. Straight line from head to heels, core tight, glutes squeezed. Activates everything before your first working set."},
+             "instruction": "Get into push-up position and hold. Straight line head to heels, core tight, glutes squeezed. Activates everything before your first working set."},
         ],
-        "exercises": [
-            {"name": "Single-Arm Floor Press", "sets": 3, "reps": "8–12 per side", "weight": "25 or 35 lb",
-             "rest": 60,
-             "instruction": "Lie on your back, press one arm at a time. Brace your core — the uneven load forces anti-rotation work. Drive through your chest, not your shoulder."},
-            {"name": "Rotating Push-Up Handles", "sets": 3, "reps": "10–15", "weight": "Bodyweight",
-             "rest": 60,
-             "instruction": "Let the handles rotate naturally as you push up. This reduces wrist strain and deepens chest activation. Keep your body in a straight plank line."},
-            {"name": "Single-Arm Shoulder Press", "sets": 3, "reps": "8–10 per side", "weight": "25 lb",
-             "rest": 60,
-             "instruction": "Stand or sit. Brace your core hard to resist leaning to the side. Press straight up, don't flare the elbow out too wide."},
-            {"name": "Alternating Lateral Raises", "sets": 3, "reps": "12–15 per side", "weight": "5–10 lb",
-             "rest": 45,
-             "instruction": "Slight bend in the elbow, raise to shoulder height only. Don't shrug. These add up fast — lighter is smarter here."},
-            {"name": "Band Tricep Pushdowns", "sets": 3, "reps": "15", "weight": "Medium band",
-             "rest": 45,
-             "instruction": "Anchor band overhead. Keep elbows pinned to your sides and push down until arms are fully extended. Squeeze at the bottom."},
-            {"name": "Single-Arm Overhead Tricep Extension", "sets": 3, "reps": "10–12 per side", "weight": "25 lb",
-             "rest": 45,
-             "instruction": "Hold dumbbell overhead, lower behind your head by bending the elbow. Keep upper arm still and vertical. Extend back up fully."},
-            {"name": "Plank", "sets": 3, "reps": "45 sec", "weight": "Bodyweight",
-             "rest": 30, "type": "timed", "duration": 45,
-             "instruction": "Forearms or hands. Keep hips level — don't let them sag or pike up. Squeeze glutes and abs throughout."},
-            {"name": "Dead Bugs", "sets": 3, "reps": "10 per side", "weight": "Bodyweight",
-             "rest": 30,
-             "instruction": "Lying on back, arms up, knees at 90°. Lower opposite arm and leg slowly while pressing lower back into the floor. Exhale as you lower."},
-            {"name": "Bicycle Crunches", "sets": 3, "reps": "20", "weight": "Bodyweight",
-             "rest": 30,
-             "instruction": "Slow and controlled — don't rush. Rotate your shoulder toward the knee, not just your elbow. Keep lower back pressed down."},
-        ]
+        "exercises": [],
     },
     "Day 2": {
-        "name": "Pull + Biceps",
-        "emoji": "",
-        "color": "#47FFD4",
+        "name": "Pull + Biceps", "color": "#47FFD4",
         "warmup": [
             {"name": "Jump Rope", "duration": 120, "type": "timed",
-             "instruction": "Easy pace to get blood flowing. Focus on relaxed shoulders and light landings. 2 minutes is enough to prime the system before pull work."},
+             "instruction": "Easy pace to get blood flowing. Relaxed shoulders, light landings. 2 minutes primes the system before pull work."},
             {"name": "Arm Circles — Forward", "duration": 30, "type": "timed",
-             "instruction": "Big slow forward circles with straight arms. Opens the shoulder capsule and rotator cuff — essential before pulling movements."},
+             "instruction": "Big slow forward circles. Opens the shoulder capsule and rotator cuff — essential before pulling movements."},
             {"name": "Arm Circles — Backward", "duration": 30, "type": "timed",
-             "instruction": "Reverse direction. The backward motion specifically targets the rear deltoids and external rotators you'll be using heavily today."},
+             "instruction": "Reverse direction. Targets the rear deltoids and external rotators you'll be using heavily today."},
             {"name": "Band Pull-Aparts", "reps": "20 reps", "type": "reps",
-             "instruction": "Hold a light band at chest width, arms straight. Pull apart until band touches your chest, squeezing shoulder blades together. Controlled return. This is your single best pre-pull warm-up movement."},
+             "instruction": "Hold band at chest width, arms straight. Pull apart until band touches chest, squeezing shoulder blades. Your single best pre-pull warm-up movement."},
             {"name": "Hip Circles", "reps": "10 each direction", "type": "reps",
-             "instruction": "Hands on hips, big slow circles in both directions. Loosens up the hip joint and lower back before the bent-over rowing position."},
+             "instruction": "Big slow circles both ways. Loosens the hip joint and lower back before the bent-over rowing position."},
             {"name": "Dead Hang — Short", "duration": 15, "type": "timed",
-             "instruction": "Jump up and simply hang from the pull-up bar for 15 seconds. Let your shoulders decompress and your grip wake up. This is your activation set before the real pull-up work."},
+             "instruction": "Hang from the bar for 15 seconds. Let shoulders decompress and grip wake up. Activation set before the real pull-up work."},
             {"name": "Scapular Pull-Ups", "reps": "8 reps", "type": "reps",
-             "instruction": "Hang from the bar with straight arms. Without bending your elbows, retract your shoulder blades — you'll rise just a couple inches. Lower back down. This isolates the lat activation you need for full pull-ups."},
+             "instruction": "Hang from bar, straight arms. Without bending elbows, retract shoulder blades — you'll rise just a couple inches. Isolates lat activation."},
             {"name": "Walkouts", "reps": "5 reps", "type": "reps",
-             "instruction": "Hinge forward, walk hands to plank, hold 2 seconds, walk back. Warms up the posterior chain — hamstrings and lower back — which get loaded during bent-over rows."},
+             "instruction": "Hinge forward, walk hands to plank, hold 2 seconds, walk back. Warms up the posterior chain loaded during bent-over rows."},
         ],
-        "exercises": [
-            {"name": "Pull-Ups", "sets": 3, "reps": "6–10", "weight": "Assisted or Bodyweight",
-             "rest": 90,
-             "instruction": "Use a resistance band looped over the bar for assistance. Full dead hang at the bottom, chin over bar at the top. Don't kip — strict reps only for now."},
-            {"name": "Single-Arm Bent-Over Row", "sets": 3, "reps": "10–12 per side", "weight": "35 lb",
-             "rest": 60,
-             "instruction": "Brace one hand on a chair or bench. Keep your back flat and parallel to the floor. Drive your elbow back, not up. Squeeze at the top."},
-            {"name": "Band Face Pulls", "sets": 3, "reps": "15", "weight": "Light-Medium band",
-             "rest": 45,
-             "instruction": "Anchor band at face height. Pull toward your forehead, elbows flaring up and out. This is your most important posture exercise — don't skip it."},
-            {"name": "Band Pull-Aparts", "sets": 3, "reps": "20", "weight": "Light band",
-             "rest": 30,
-             "instruction": "Start at chest width, pull until band touches chest. Controlled return. Rear delts and upper back."},
-            {"name": "Alternating Dumbbell Curls", "sets": 3, "reps": "10–12 per side", "weight": "25 lb",
-             "rest": 45,
-             "instruction": "Supinate (rotate) the wrist as you curl up. Don't swing — keep upper arms pinned to your sides. Full extension at the bottom."},
-            {"name": "Alternating Hammer Curls", "sets": 3, "reps": "10 per side", "weight": "25 lb",
-             "rest": 45,
-             "instruction": "Neutral grip (thumbs up). Targets the brachialis — the muscle under the bicep that adds width. Same strict form as curls."},
-            {"name": "Dead Hangs", "sets": 3, "reps": "20–30 sec", "weight": "Bodyweight",
-             "rest": 45, "type": "timed", "duration": 25,
-             "instruction": "Full grip on the bar, let your body hang completely. Builds grip strength and decompresses your spine. Breathe slowly."},
-        ]
+        "exercises": [],
     },
     "Day 3": {
-        "name": "Legs + Glutes",
-        "emoji": "",
-        "color": "#FF6B9D",
+        "name": "Legs + Glutes", "color": "#FF6B9D",
         "warmup": [
             {"name": "Jump Rope", "duration": 120, "type": "timed",
-             "instruction": "2 minutes easy. Warms up the ankles and calves specifically, which take a beating in squats and lunges. Land softly and rhythmically."},
+             "instruction": "2 minutes easy. Warms up ankles and calves which take a beating in squats and lunges. Land softly and rhythmically."},
             {"name": "Leg Swings — Forward & Back", "reps": "10 per leg", "type": "reps",
-             "instruction": "Hold a wall for balance. Swing one leg forward and back like a pendulum, gradually increasing the range. 10 reps per leg. Loosens the hip flexor and hamstring."},
+             "instruction": "Hold wall for balance. Swing one leg forward and back like a pendulum, increasing range. 10 reps per leg. Loosens hip flexor and hamstring."},
             {"name": "Leg Swings — Side to Side", "reps": "10 per leg", "type": "reps",
-             "instruction": "Same wall hold. Swing the leg across your body and out to the side. 10 reps per leg. Targets the adductors and outer hip — both get loaded during lateral movements."},
+             "instruction": "Same wall hold. Swing leg across body and out to the side. 10 reps per leg. Targets adductors and outer hip."},
             {"name": "Hip Circles", "reps": "10 each direction", "type": "reps",
-             "instruction": "Hands on hips, feet wide, big slow circles. Forward 10, backward 10. Opens the hip joint specifically before the goblet squat and RDL loading."},
+             "instruction": "Feet wide, big slow circles both ways. Opens the hip joint before goblet squat and RDL loading."},
             {"name": "Lateral Lunges", "reps": "10 per side", "type": "reps",
-             "instruction": "Bodyweight only, no weight. Sink as deep as you can and hold 1 second at the bottom. The adductor stretch here is your best prep for the goblet squat depth you'll need."},
+             "instruction": "Bodyweight only. Sink as deep as you can, hold 1 second at bottom. Adductor stretch is your best prep for goblet squat depth."},
             {"name": "Glute Bridges — Bodyweight", "reps": "15 reps", "type": "reps",
-             "instruction": "No weights yet. Lie on back, feet flat, drive hips up and squeeze glutes hard at the top. This is a glute activation warm-up — if your glutes don't fire properly, your lower back takes the load instead."},
+             "instruction": "No weights. Drive hips up, squeeze glutes hard at top. Glute activation warm-up — if glutes don't fire, your lower back takes the load instead."},
             {"name": "Bodyweight Squat", "reps": "10 reps", "type": "reps",
-             "instruction": "Feet shoulder-width, toes slightly out. Full depth, chest tall, knees tracking over toes. These are pure movement prep — slow and controlled, pausing 1 second at the bottom to open the ankle and hip."},
+             "instruction": "Full depth, chest tall, pause 1 second at bottom. Pure movement prep — slow and controlled to open ankle and hip."},
             {"name": "Hip Flexor Stretch", "duration": 20, "type": "timed",
-             "instruction": "Kneel on one knee, the other foot forward. Push your hips gently forward until you feel a stretch in the front of the back-leg hip. Hold 20 seconds per side. Tight hip flexors are the number one reason squats go wrong."},
+             "instruction": "Kneel on one knee, other foot forward. Push hips forward until you feel stretch in front of back-leg hip. 20 seconds per side. Tight hip flexors are the #1 reason squats go wrong."},
         ],
-        "exercises": [
-            {"name": "Goblet Squat", "sets": 3, "reps": "12–15", "weight": "35 lb",
-             "rest": 60,
-             "instruction": "Hold dumbbell at chest height in both hands. Feet shoulder-width, toes slightly out. Squat deep, keeping chest tall. Drive knees out over toes."},
-            {"name": "Single-Leg Romanian Deadlift", "sets": 3, "reps": "8–10 per side", "weight": "35 lb",
-             "rest": 60,
-             "instruction": "Hold dumbbell in opposite hand to working leg. Hinge at the hip, let the free leg trail back. Keep back flat. Feel the hamstring stretch at the bottom."},
-            {"name": "Reverse Lunges (Weight Vest)", "sets": 3, "reps": "12 per leg", "weight": "Weight vest",
-             "rest": 60,
-             "instruction": "Step back, lower the back knee toward the floor. Keep front shin vertical. Drive through the front heel to return. Control the descent."},
-            {"name": "Glute Bridges (Leg Weights)", "sets": 3, "reps": "20", "weight": "Leg weights",
-             "rest": 45,
-             "instruction": "Lie on back, feet flat, leg weights strapped on. Drive hips up by squeezing glutes hard. Hold at top for 1 second. Lower slowly."},
-            {"name": "Donkey Kicks (Leg Weights)", "sets": 3, "reps": "15 per side", "weight": "Leg weights",
-             "rest": 30,
-             "instruction": "On all fours. Keep the 90° bend in your knee and kick straight up toward the ceiling. Squeeze the glute at the top. Hips stay level."},
-            {"name": "Banded Lateral Walks", "sets": 3, "reps": "15 steps each way", "weight": "Medium band",
-             "rest": 30,
-             "instruction": "Band around thighs just above knees. Slight squat position, stay low throughout. Step side to side maintaining tension in the band. Burns the outer glute (gluteus medius)."},
-            {"name": "Jump Rope Intervals", "sets": 5, "reps": "30s on / 15s off", "weight": "Bodyweight",
-             "rest": 15, "type": "timed", "duration": 30,
-             "instruction": "Push the pace here. This is conditioning. Breathe rhythmically and try to maintain form even when tired."},
-        ]
+        "exercises": [],
     },
     "Day 4": {
-        "name": "Full Body + Conditioning",
-        "emoji": "",
-        "color": "#FF8C42",
+        "name": "Full Body + Conditioning", "color": "#FF8C42",
         "warmup": [
             {"name": "Jump Rope", "duration": 180, "type": "timed",
-             "instruction": "3 minutes — start easy and build pace in the last minute. Today is your highest intensity day so this warm-up matters more than any other. Don't skip a second of it."},
+             "instruction": "3 minutes — start easy, build pace in the last minute. Highest intensity day so this warm-up matters most. Don't skip a second of it."},
             {"name": "Arm Circles — Forward", "duration": 30, "type": "timed",
-             "instruction": "Big forward circles, progressively wider. Today hits chest, back, and shoulders all in the same session — this opens everything at once."},
+             "instruction": "Big forward circles, progressively wider. Today hits chest, back, and shoulders all in one session — this opens everything at once."},
             {"name": "Arm Circles — Backward", "duration": 30, "type": "timed",
              "instruction": "Reverse direction. Pay attention to any shoulder tightness — today's pressing and pulling in the same circuit puts extra demand on the joint."},
             {"name": "Hip Circles", "reps": "10 each direction", "type": "reps",
-             "instruction": "Hands on hips, big slow circles both ways. Full body day means full body warm-up — the hips are the hinge of everything."},
+             "instruction": "Big slow circles both ways. Full body day means full body warm-up — the hips are the hinge of everything."},
             {"name": "Walkouts", "reps": "5 reps", "type": "reps",
-             "instruction": "Slow and deliberate. This one movement warms up shoulders, hamstrings, and core simultaneously — perfect for a day that hits all three. Pause 2 seconds in the plank."},
+             "instruction": "Slow and deliberate. Warms up shoulders, hamstrings, and core simultaneously. Pause 2 seconds in the plank."},
             {"name": "Lateral Lunges", "reps": "10 per side", "type": "reps",
-             "instruction": "Get the hips and adductors ready. Reach the opposite arm across as you lunge. Today's circuit is relentless — walk in ready."},
+             "instruction": "Get hips and adductors ready. Reach opposite arm across as you lunge. Today's circuit is relentless — walk in ready."},
             {"name": "Bodyweight Squat", "reps": "10 reps", "type": "reps",
-             "instruction": "Full depth, slow, controlled. These prime the pattern you'll use in the dumbbell thrusters. Focus on sitting back into the squat, not just bending your knees."},
+             "instruction": "Full depth, slow, controlled. Primes the pattern for dumbbell thrusters. Focus on sitting back, not just bending your knees."},
             {"name": "Push-Up Plank Hold", "duration": 20, "type": "timed",
-             "instruction": "Final activation before the circuit begins. Straight plank position, core braced hard, breathe steadily. You are about to work — this is your last moment of stillness."},
+             "instruction": "Final activation. Straight plank, core braced hard. You are about to work — this is your last moment of stillness."},
         ],
-        "exercises": [
-            {"name": "Rotating Push-Up Handles", "sets": 4, "reps": "10", "weight": "Bodyweight",
-             "rest": 15,
-             "instruction": "CIRCUIT — minimal rest between exercises, 60s rest between rounds. Keep your plank tight and let handles rotate freely."},
-            {"name": "Chin-Ups", "sets": 4, "reps": "8", "weight": "Assisted or Bodyweight",
-             "rest": 15,
-             "instruction": "Underhand grip (easier than pull-ups). Full range of motion. Use band assist if needed to complete all reps with good form."},
-            {"name": "Single-Arm Dumbbell Thrusters", "sets": 4, "reps": "5 per side", "weight": "25 lb",
-             "rest": 15,
-             "instruction": "Squat to press combined. Hold dumbbell at shoulder, squat down, drive up and press overhead in one fluid motion. Alternate sides each rep."},
-            {"name": "Single-Leg Romanian Deadlift", "sets": 4, "reps": "5 per side", "weight": "35 lb",
-             "rest": 15,
-             "instruction": "Keep it controlled even in the circuit. Quality over speed on this one — it's a balance and hinge movement."},
-            {"name": "Glute Bridges (Leg Weights)", "sets": 4, "reps": "15", "weight": "Leg weights",
-             "rest": 15,
-             "instruction": "Squeeze and hold 1 second at the top of every rep. Even in a circuit, make these count."},
-            {"name": "Jump Rope", "sets": 4, "reps": "30 seconds", "weight": "Bodyweight",
-             "rest": 60, "type": "timed", "duration": 30,
-             "instruction": "This is your round finisher. Push hard. After this, rest 60 seconds and start the next round from Push-Ups."},
-        ]
+        "exercises": [],
     },
 }
 
@@ -244,186 +138,156 @@ REST_DAY_STRETCHING = [
     {"name": "Lat Stretch", "duration": 45, "sides": False,
      "instruction": "Grab pull-up bar or doorframe, hinge hips back. Let upper back open completely. Breathe into the stretch."},
     {"name": "Thread the Needle", "duration": 45, "sides": True,
-     "instruction": "On all fours, slide one arm under your body along the floor. Rotate your upper back. Targets thoracic spine and rear shoulder."},
+     "instruction": "On all fours, slide one arm under body along the floor. Rotate upper back. Targets thoracic spine and rear shoulder."},
     {"name": "Neck Stretch", "duration": 30, "sides": True,
-     "instruction": "Drop one ear toward shoulder. Then look down toward your armpit for a different angle. Never force — just let gravity do the work."},
+     "instruction": "Drop one ear toward shoulder. Then look down toward your armpit. Never force — let gravity do the work."},
     {"name": "Pigeon Pose", "duration": 90, "sides": True,
-     "instruction": "From plank, bring one knee forward toward your wrist. Let shin rest diagonally. Sink hips down. 90 seconds per side — your most important stretch."},
-    {"name": "Lying Hamstring Stretch (Band)", "duration": 45, "sides": True,
-     "instruction": "Loop resistance band around foot. Lie on back, keep leg straight, gently pull toward you. Don't force — breathe and let the muscle release."},
+     "instruction": "From plank, bring one knee forward toward wrist. Sink hips down. 90 seconds per side — your most important stretch."},
+    {"name": "Lying Hamstring Stretch", "duration": 45, "sides": True,
+     "instruction": "Loop band around foot. Lie on back, keep leg straight, gently pull toward you. Breathe and let the muscle release."},
     {"name": "Butterfly Stretch", "duration": 60, "sides": False,
-     "instruction": "Soles of feet together, press knees toward floor, hinge forward at the hips. Opens the inner groin and hips."},
+     "instruction": "Soles of feet together, press knees toward floor, hinge forward at hips. Opens inner groin and hips."},
     {"name": "Child's Pose", "duration": 90, "sides": False,
-     "instruction": "Arms extended or alongside body. Focus on your lower back decompressing. Breathe deeply — exhale and sink further each breath."},
+     "instruction": "Arms extended or alongside body. Focus on lower back decompressing. Breathe deeply — exhale and sink further each breath."},
     {"name": "Supine Spinal Twist", "duration": 45, "sides": True,
-     "instruction": "On your back, bring one knee across your body, look the opposite direction. Feel the rotation through your entire spine."},
+     "instruction": "On your back, bring one knee across body, look the opposite direction. Feel the rotation through your entire spine."},
 ]
+
+BAG_WARMUP = [
+    {"name": "Footwork Ladder Drill", "duration": 60, "type": "timed",
+     "instruction": "Stay on the balls of your feet. Practice in-out, side-to-side, and pivot steps in front of the bag. Hands up in guard. No punching yet — build rhythm and weight transfer."},
+    {"name": "Shadow Boxing — Movement Only", "duration": 60, "type": "timed",
+     "instruction": "Move around an imaginary opponent. No punches — just footwork, head movement, and slipping. Stay loose, knees slightly bent, chin tucked."},
+    {"name": "Jab Only — Bag Work", "duration": 60, "type": "timed",
+     "instruction": "Step in, throw a crisp jab, step out. Focus on extension and retraction — snap it back as fast as you throw it. Rear hand stays at your chin."},
+    {"name": "Jab / Cross Combos", "duration": 60, "type": "timed",
+     "instruction": "1-2 combinations at 60% power. Step forward on the jab, drive hips through the cross. Return to guard immediately. Breathe out sharply on every punch."},
+    {"name": "Shadow Boxing — Full Combos", "duration": 60, "type": "timed",
+     "instruction": "String together 3–5 punch combinations in the air. Add head movement between combos — slip left, slip right, roll under. Stay light on your feet."},
+    {"name": "Footwork — Circle & Cut", "duration": 45, "type": "timed",
+     "instruction": "Circle the bag continuously, cutting angles every few steps. Pivot off your lead foot to change direction. A moving target is harder to hit."},
+    {"name": "Timed Round — Bag Work", "duration": 180, "type": "timed",
+     "instruction": "3-minute round at full intensity. Mix jabs, crosses, body shots, and movement. Work the whole bag — high, mid, and low. By the end you should be fully warmed up and winded."},
+    {"name": "Shake Out & Breathe", "duration": 30, "type": "timed",
+     "instruction": "Drop your hands, shake out arms and shoulders, roll your neck gently. Breathe deeply — in through nose, out through mouth. Let heart rate settle."},
+]
+
 
 PROGRESS_FILE = "workout_progress.json"
 EQUIPMENT_FILE = "equipment.json"
+PRESETS_FILE = "presets.json"
+APP_VERSION = "1.5.0"
 
-APP_VERSION = "1.3.0"
 CHANGELOG = [
-    {
-        "version": "1.3.0",
-        "date": "Feb 2026",
-        "changes": [
-            "Expanded equipment library to 60+ items covering every training environment",
-            "Added location presets (Home, Gym, Park, Hotel, Travel, Office)",
-            "Added app menu with exit, version info, and changelog",
-            "Equipment screen now grouped and scrollable with preset quick-load",
-        ]
-    },
-    {
-        "version": "1.2.0",
-        "date": "Feb 2026",
-        "changes": [
-            "Full equipment system — exercises auto-adapt to what you own",
-            "13 exercise types each with 4–6 variations from full equipment to bodyweight",
-            "Equipment saved to disk and loaded on every workout start",
-        ]
-    },
-    {
-        "version": "1.1.0",
-        "date": "Feb 2026",
-        "changes": [
-            "Expanded warmup routines — 8 movements per day, specifically chosen per workout",
-            "Warmup complete transition screen before workout begins",
-            "Start / Pause / Stop workout controls with confirmation dialog",
-            "Rest timers auto-start between sets with restart button",
-        ]
-    },
-    {
-        "version": "1.0.0",
-        "date": "Feb 2026",
-        "changes": [
-            "Initial release with 4-day workout split + rest day stretching",
-            "Exercise instructions for every movement",
-            "Workout progress tracking with streak counter",
-            "Dark theme UI with per-day accent colours",
-        ]
-    },
+    {"version": "1.5.0", "date": "Feb 2026", "changes": [
+        "Equipment selection now fully drives the workout — every exercise slot has variations",
+        "All exercises route through the variation resolver — no more hardcoded static exercises",
+        "Workout buttons redesigned to a clean single row: Pause | Stop | Done",
+        "Pause button label updates contextually for exercise timer vs rest timer",
+    ]},
+    {"version": "1.4.0", "date": "Feb 2026", "changes": [
+        "Added Punching Bag to equipment — detects ownership automatically",
+        "Bag warmup mode: 8 rounds of footwork, combos, shadow boxing, and timed rounds",
+        "Warmup choice popup appears at the start of any workout when punching bag is selected",
+    ]},
+    {"version": "1.3.0", "date": "Feb 2026", "changes": [
+        "Expanded equipment library to 60+ items covering every training environment",
+        "Added location presets (Home, Gym, Park, Office)",
+        "Added app menu with exit, version info, and changelog",
+        "Equipment screen now grouped and scrollable with preset quick-load",
+    ]},
+    {"version": "1.2.0", "date": "Feb 2026", "changes": [
+        "Full equipment system — exercises auto-adapt to what you own",
+        "13 exercise types each with 4–6 variations from full equipment to bodyweight",
+        "Equipment saved to disk and loaded on every workout start",
+    ]},
+    {"version": "1.1.0", "date": "Feb 2026", "changes": [
+        "Expanded warmup routines — 8 movements per day, specifically chosen per workout",
+        "Warmup complete transition screen before workout begins",
+        "Start / Pause / Stop workout controls with confirmation dialog",
+        "Rest timers auto-start between sets with restart button",
+    ]},
+    {"version": "1.0.0", "date": "Feb 2026", "changes": [
+        "Initial release with 4-day workout split + rest day stretching",
+        "Exercise instructions for every movement",
+        "Workout progress tracking with streak counter",
+        "Dark theme UI with per-day accent colours",
+    ]},
 ]
 
-# ─────────────────────────────────────────────
-# EQUIPMENT SYSTEM
-# ─────────────────────────────────────────────
-
 ALL_EQUIPMENT = {
-    # ── CARDIO ──
-    "jump_rope":          {"label": "Jump Rope",                "emoji": "-", "group": "Cardio"},
-    "treadmill":          {"label": "Treadmill",                "emoji": "-", "group": "Cardio"},
-    "stationary_bike":    {"label": "Stationary Bike",          "emoji": "-", "group": "Cardio"},
-    "rowing_machine":     {"label": "Rowing Machine",           "emoji": "-", "group": "Cardio"},
-    "stair_climber":      {"label": "Stair Climber",            "emoji": "-", "group": "Cardio"},
-    "elliptical":         {"label": "Elliptical",               "emoji": "-", "group": "Cardio"},
-    "assault_bike":       {"label": "Assault / Air Bike",       "emoji": "-", "group": "Cardio"},
-
-    # ── BARS & RIGS ──
-    "pull_up_bar":        {"label": "Pull-Up Bar",              "emoji": "-", "group": "Bars & Rigs"},
-    "dip_bars":           {"label": "Dip Bars / Parallel Bars", "emoji": "-", "group": "Bars & Rigs"},
-    "barbell":            {"label": "Barbell",                  "emoji": "", "group": "Bars & Rigs"},
-    "ez_curl_bar":        {"label": "EZ Curl Bar",              "emoji": "-", "group": "Bars & Rigs"},
-    "squat_rack":         {"label": "Squat Rack / Power Rack",  "emoji": "-", "group": "Bars & Rigs"},
-    "smith_machine":      {"label": "Smith Machine",            "emoji": "-", "group": "Bars & Rigs"},
-
-    # ── PUSH EQUIPMENT ──
-    "push_up_handles":    {"label": "Rotating Push-Up Handles", "emoji": "-", "group": "Push"},
-    "push_up_board":      {"label": "Push-Up Board",            "emoji": "-", "group": "Push"},
-    "bench_flat":         {"label": "Flat Bench",               "emoji": "-", "group": "Push"},
-    "bench_adjustable":   {"label": "Adjustable Bench",         "emoji": "-", "group": "Push"},
-
-    # ── DUMBBELLS ──
-    "dumbbells_light":    {"label": "Dumbbells 3–10 lb",        "emoji": "", "group": "Dumbbells"},
-    "dumbbells_medium":   {"label": "Dumbbells 12–25 lb",       "emoji": "", "group": "Dumbbells"},
-    "dumbbells_heavy":    {"label": "Dumbbells 30–50 lb",       "emoji": "", "group": "Dumbbells"},
-    "dumbbell_25":        {"label": "Single 25 lb Dumbbell",    "emoji": "", "group": "Dumbbells"},
-    "dumbbell_35":        {"label": "Single 35 lb Dumbbell",    "emoji": "", "group": "Dumbbells"},
-    "adjustable_dumbbell":{"label": "Adjustable Dumbbells",     "emoji": "-", "group": "Dumbbells"},
-
-    # ── KETTLEBELLS ──
-    "kettlebell_light":   {"label": "Kettlebell 8–16 kg",       "emoji": "-", "group": "Kettlebells"},
-    "kettlebell_heavy":   {"label": "Kettlebell 20–32 kg",      "emoji": "-", "group": "Kettlebells"},
-
-    # ── RESISTANCE BANDS ──
-    "bands_light":        {"label": "Light Resistance Band",    "emoji": "-", "group": "Bands"},
-    "bands_medium":       {"label": "Medium Resistance Band",   "emoji": "-", "group": "Bands"},
-    "bands_heavy":        {"label": "Heavy Resistance Band",    "emoji": "-", "group": "Bands"},
-    "bands_loop":         {"label": "Loop / Booty Bands",       "emoji": "-", "group": "Bands"},
-    "cable_machine":      {"label": "Cable Machine",            "emoji": "-", "group": "Bands"},
-
-    # ── WEIGHTED GEAR ──
-    "weight_vest":        {"label": "Weight Vest",              "emoji": "-", "group": "Weighted Gear"},
-    "arm_weights":        {"label": "Arm Weights",              "emoji": "", "group": "Weighted Gear"},
-    "leg_weights":        {"label": "Leg Weights",              "emoji": "", "group": "Weighted Gear"},
-    "weight_plates":      {"label": "Weight Plates",            "emoji": "-", "group": "Weighted Gear"},
-
-    # ── MACHINES (GYM) ──
-    "leg_press":          {"label": "Leg Press Machine",        "emoji": "", "group": "Machines"},
-    "leg_curl":           {"label": "Leg Curl Machine",         "emoji": "", "group": "Machines"},
-    "leg_extension":      {"label": "Leg Extension Machine",    "emoji": "", "group": "Machines"},
-    "lat_pulldown":       {"label": "Lat Pulldown Machine",     "emoji": "-", "group": "Machines"},
-    "seated_row":         {"label": "Seated Row Machine",       "emoji": "-", "group": "Machines"},
-    "chest_fly_machine":  {"label": "Chest Fly / Pec Deck",     "emoji": "-", "group": "Machines"},
-    "shoulder_press_mach":{"label": "Shoulder Press Machine",   "emoji": "-", "group": "Machines"},
-    "hack_squat":         {"label": "Hack Squat Machine",       "emoji": "-", "group": "Machines"},
-    "ab_crunch_machine":  {"label": "Ab Crunch Machine",        "emoji": "-", "group": "Machines"},
-
-    # ── FLOOR & STABILITY ──
-    "yoga_mat":           {"label": "Yoga / Exercise Mat",      "emoji": "-", "group": "Floor & Stability"},
-    "foam_roller":        {"label": "Foam Roller",              "emoji": "-", "group": "Floor & Stability"},
-    "stability_ball":     {"label": "Stability / Swiss Ball",   "emoji": "-", "group": "Floor & Stability"},
-    "bosu_ball":          {"label": "BOSU Ball",                "emoji": "-", "group": "Floor & Stability"},
-    "ab_wheel":           {"label": "Ab Wheel",                 "emoji": "-", "group": "Floor & Stability"},
-    "balance_board":      {"label": "Balance Board",            "emoji": "-", "group": "Floor & Stability"},
-    "parallettes":        {"label": "Parallettes",              "emoji": "-", "group": "Floor & Stability"},
-
-    # ── SUSPENSION & RINGS ──
-    "trx":                {"label": "TRX / Suspension Trainer", "emoji": "-", "group": "Suspension"},
-    "gymnastic_rings":    {"label": "Gymnastic Rings",          "emoji": "-", "group": "Suspension"},
-
-    # ── ENVIRONMENT ──
-    "stairs":             {"label": "Stairs / Steps",           "emoji": "-", "group": "Environment"},
-    "outdoor_park":       {"label": "Outdoor Park / Playground","emoji": "-", "group": "Environment"},
-    "swimming_pool":      {"label": "Swimming Pool",            "emoji": "-", "group": "Environment"},
-    "open_floor":         {"label": "Open Floor Space",         "emoji": "-", "group": "Environment"},
-    "wall":               {"label": "Sturdy Wall",              "emoji": "-", "group": "Environment"},
-    "chair_or_bench":     {"label": "Chair or Sturdy Surface",  "emoji": "-", "group": "Environment"},
-    "sandbag":            {"label": "Sandbag",                  "emoji": "-", "group": "Environment"},
-    "sled":               {"label": "Push / Pull Sled",         "emoji": "-", "group": "Environment"},
-    "battle_ropes":       {"label": "Battle Ropes",             "emoji": "-", "group": "Environment"},
-    "medicine_ball":      {"label": "Medicine Ball",            "emoji": "-", "group": "Environment"},
+    "jump_rope":          {"label": "Jump Rope",                "group": "Cardio"},
+    "punching_bag":       {"label": "Punching Bag",             "group": "Cardio"},
+    "treadmill":          {"label": "Treadmill",                "group": "Cardio"},
+    "stationary_bike":    {"label": "Stationary Bike",          "group": "Cardio"},
+    "rowing_machine":     {"label": "Rowing Machine",           "group": "Cardio"},
+    "stair_climber":      {"label": "Stair Climber",            "group": "Cardio"},
+    "elliptical":         {"label": "Elliptical",               "group": "Cardio"},
+    "assault_bike":       {"label": "Assault / Air Bike",       "group": "Cardio"},
+    "pull_up_bar":        {"label": "Pull-Up Bar",              "group": "Bars & Rigs"},
+    "dip_bars":           {"label": "Dip Bars / Parallel Bars", "group": "Bars & Rigs"},
+    "barbell":            {"label": "Barbell",                  "group": "Bars & Rigs"},
+    "ez_curl_bar":        {"label": "EZ Curl Bar",              "group": "Bars & Rigs"},
+    "squat_rack":         {"label": "Squat Rack / Power Rack",  "group": "Bars & Rigs"},
+    "smith_machine":      {"label": "Smith Machine",            "group": "Bars & Rigs"},
+    "push_up_handles":    {"label": "Rotating Push-Up Handles", "group": "Push"},
+    "push_up_board":      {"label": "Push-Up Board",            "group": "Push"},
+    "bench_flat":         {"label": "Flat Bench",               "group": "Push"},
+    "bench_adjustable":   {"label": "Adjustable Bench",         "group": "Push"},
+    "dumbbells_light":    {"label": "Dumbbells 3–10 lb",        "group": "Dumbbells"},
+    "dumbbells_medium":   {"label": "Dumbbells 12–25 lb",       "group": "Dumbbells"},
+    "dumbbells_heavy":    {"label": "Dumbbells 30–50 lb",       "group": "Dumbbells"},
+    "dumbbell_25":        {"label": "Single 25 lb Dumbbell",    "group": "Dumbbells"},
+    "dumbbell_35":        {"label": "Single 35 lb Dumbbell",    "group": "Dumbbells"},
+    "adjustable_dumbbell":{"label": "Adjustable Dumbbells",     "group": "Dumbbells"},
+    "kettlebell_light":   {"label": "Kettlebell 8–16 kg",       "group": "Kettlebells"},
+    "kettlebell_heavy":   {"label": "Kettlebell 20–32 kg",      "group": "Kettlebells"},
+    "bands_light":        {"label": "Light Resistance Band",    "group": "Bands"},
+    "bands_medium":       {"label": "Medium Resistance Band",   "group": "Bands"},
+    "bands_heavy":        {"label": "Heavy Resistance Band",    "group": "Bands"},
+    "bands_loop":         {"label": "Loop / Booty Bands",       "group": "Bands"},
+    "cable_machine":      {"label": "Cable Machine",            "group": "Bands"},
+    "weight_vest":        {"label": "Weight Vest",              "group": "Weighted Gear"},
+    "arm_weights":        {"label": "Arm Weights",              "group": "Weighted Gear"},
+    "leg_weights":        {"label": "Leg Weights",              "group": "Weighted Gear"},
+    "weight_plates":      {"label": "Weight Plates",            "group": "Weighted Gear"},
+    "leg_press":          {"label": "Leg Press Machine",        "group": "Machines"},
+    "leg_curl":           {"label": "Leg Curl Machine",         "group": "Machines"},
+    "leg_extension":      {"label": "Leg Extension Machine",    "group": "Machines"},
+    "lat_pulldown":       {"label": "Lat Pulldown Machine",     "group": "Machines"},
+    "seated_row":         {"label": "Seated Row Machine",       "group": "Machines"},
+    "chest_fly_machine":  {"label": "Chest Fly / Pec Deck",     "group": "Machines"},
+    "shoulder_press_mach":{"label": "Shoulder Press Machine",   "group": "Machines"},
+    "hack_squat":         {"label": "Hack Squat Machine",       "group": "Machines"},
+    "ab_crunch_machine":  {"label": "Ab Crunch Machine",        "group": "Machines"},
+    "yoga_mat":           {"label": "Yoga / Exercise Mat",      "group": "Floor & Stability"},
+    "foam_roller":        {"label": "Foam Roller",              "group": "Floor & Stability"},
+    "stability_ball":     {"label": "Stability / Swiss Ball",   "group": "Floor & Stability"},
+    "bosu_ball":          {"label": "BOSU Ball",                "group": "Floor & Stability"},
+    "ab_wheel":           {"label": "Ab Wheel",                 "group": "Floor & Stability"},
+    "balance_board":      {"label": "Balance Board",            "group": "Floor & Stability"},
+    "parallettes":        {"label": "Parallettes",              "group": "Floor & Stability"},
+    "trx":                {"label": "TRX / Suspension Trainer", "group": "Suspension"},
+    "gymnastic_rings":    {"label": "Gymnastic Rings",          "group": "Suspension"},
+    "stairs":             {"label": "Stairs / Steps",           "group": "Environment"},
+    "outdoor_park":       {"label": "Outdoor Park / Playground","group": "Environment"},
+    "swimming_pool":      {"label": "Swimming Pool",            "group": "Environment"},
+    "open_floor":         {"label": "Open Floor Space",         "group": "Environment"},
+    "wall":               {"label": "Sturdy Wall",              "group": "Environment"},
+    "chair_or_bench":     {"label": "Chair or Sturdy Surface",  "group": "Environment"},
+    "sandbag":            {"label": "Sandbag",                  "group": "Environment"},
+    "sled":               {"label": "Push / Pull Sled",         "group": "Environment"},
+    "battle_ropes":       {"label": "Battle Ropes",             "group": "Environment"},
+    "medicine_ball":      {"label": "Medicine Ball",            "group": "Environment"},
 }
 
-DEFAULT_EQUIPMENT = set(ALL_EQUIPMENT.keys())  # start with everything owned
+DEFAULT_EQUIPMENT = set(ALL_EQUIPMENT.keys())
 
-# ── Location presets — tap to load a typical environment ──
 LOCATION_PRESETS = {
-    "Home (Minimal)": {
-        "keys": {"open_floor",
-                 "chair_or_bench","wall"},
-        "desc": "Your home setup with personal equipment",
-    },
-    "Commercial Gym": {
-        "keys": {"barbell","squat_rack","bench_flat","bench_adjustable","dumbbells_light",
-                 "dumbbells_medium","dumbbells_heavy","adjustable_dumbbell","kettlebell_light",
-                 "kettlebell_heavy","cable_machine","lat_pulldown","seated_row","leg_press",
-                 "leg_curl","leg_extension","chest_fly_machine","shoulder_press_mach",
-                 "hack_squat","ab_crunch_machine","pull_up_bar","dip_bars","bands_light",
-                 "bands_medium","bands_heavy","bands_loop","treadmill","stationary_bike",
-                 "rowing_machine","stair_climber","elliptical","assault_bike","yoga_mat",
-                 "foam_roller","stability_ball","ab_wheel","open_floor"},
-        "desc": "Full commercial gym with all equipment",
-    },
-    "Outdoor / Park": {
-        "keys": {"outdoor_park","stairs",
-                 "open_floor","wall"},
-        "desc": "Park, calisthenics area, or outdoor gym",
-    },
-    "Office / Desk Break": {
-        "keys": {"chair_or_bench","wall"},
-        "desc": "No equipment, just your bodyweight and what's in the room",
-    },
+    "Home (Minimal)": {"keys": {"open_floor", "chair_or_bench", "wall"}, "desc": "Home with minimal gear"},
+    "Commercial Gym":  {"keys": {"barbell","squat_rack","bench_flat","bench_adjustable","dumbbells_light","dumbbells_medium","dumbbells_heavy","adjustable_dumbbell","kettlebell_light","kettlebell_heavy","cable_machine","lat_pulldown","seated_row","leg_press","leg_curl","leg_extension","chest_fly_machine","shoulder_press_mach","hack_squat","ab_crunch_machine","pull_up_bar","dip_bars","bands_light","bands_medium","bands_heavy","bands_loop","treadmill","stationary_bike","rowing_machine","stair_climber","elliptical","assault_bike","yoga_mat","foam_roller","stability_ball","ab_wheel","open_floor"}, "desc": "Full commercial gym"},
+    "Outdoor / Park":  {"keys": {"outdoor_park", "stairs", "open_floor", "wall"}, "desc": "Park or outdoor gym"},
+    "Office Break":    {"keys": {"chair_or_bench", "wall"}, "desc": "Bodyweight only"},
 }
 
 def load_equipment():
@@ -432,7 +296,7 @@ def load_equipment():
             with open(EQUIPMENT_FILE, 'r') as f:
                 data = json.load(f)
                 return set(data.get("owned", list(DEFAULT_EQUIPMENT)))
-    except (json.JSONDecodeError, IOError, KeyError):
+    except Exception:
         pass
     return set(DEFAULT_EQUIPMENT)
 
@@ -443,19 +307,15 @@ def save_equipment(owned_set):
     except IOError:
         pass
 
-PRESETS_FILE = "presets.json"
-
 def load_presets():
-    """Load all presets. On first run, seeds from LOCATION_PRESETS defaults."""
     try:
         if os.path.exists(PRESETS_FILE):
             with open(PRESETS_FILE, 'r') as f:
                 data = json.load(f)
                 return {name: {"keys": set(v["keys"]), "desc": v.get("desc", "")}
                         for name, v in data.items()}
-    except (json.JSONDecodeError, IOError, KeyError):
+    except Exception:
         pass
-    # First run — seed from built-in defaults
     return {name: {"keys": set(v["keys"]), "desc": v["desc"]}
             for name, v in LOCATION_PRESETS.items()}
 
@@ -467,388 +327,12 @@ def save_presets(presets):
     except IOError:
         pass
 
-# ─────────────────────────────────────────────
-# EXERCISE VARIATION LIBRARY
-# Each exercise has variations keyed by equipment requirements.
-# The resolver picks the best available variation.
-# ─────────────────────────────────────────────
-
-EXERCISE_VARIATIONS = {
-    # ── PUSH ──
-    "chest_press": [
-        {"requires": {"push_up_handles", "dumbbell_25"},
-         "name": "Single-Arm Floor Press + Push-Up Handles Superset",
-         "weight": "25 lb / Bodyweight",
-         "instruction": "Alternate: Single-arm floor press (25 lb) then immediately drop to push-up handles. Chest is fully fried by the end of each set."},
-        {"requires": {"dumbbell_25"},
-         "name": "Single-Arm Floor Press",
-         "weight": "25 or 35 lb",
-         "instruction": "Lie on your back, press one arm at a time. Brace your core — the uneven load forces anti-rotation work. Drive through your chest, not your shoulder."},
-        {"requires": {"dumbbell_35"},
-         "name": "Single-Arm Floor Press",
-         "weight": "35 lb",
-         "instruction": "Lie on your back, press one arm at a time. Heavier load — brace harder. Drive through your chest, not your shoulder."},
-        {"requires": {"push_up_handles"},
-         "name": "Rotating Push-Up Handles",
-         "weight": "Bodyweight",
-         "instruction": "Let handles rotate as you push. Deep chest activation. Keep a rigid plank throughout."},
-        {"requires": {"bands_medium"},
-         "name": "Band Push-Up (Band Across Back)",
-         "weight": "Medium Band",
-         "instruction": "Loop band across your upper back, hold ends in each hand on the floor. Push-up as normal — band adds resistance at the top."},
-        {"requires": set(),
-         "name": "Push-Ups",
-         "weight": "Bodyweight",
-         "instruction": "Classic push-up. Hands slightly wider than shoulders. Lower chest to within an inch of the floor. Full lockout at the top."},
-    ],
-    "shoulder_press": [
-        {"requires": {"dumbbell_25"},
-         "name": "Single-Arm Shoulder Press",
-         "weight": "25 lb",
-         "instruction": "Stand or sit. Brace your core hard to resist leaning to the side. Press straight up, don't flare the elbow out too wide."},
-        {"requires": {"dumbbell_35"},
-         "name": "Single-Arm Shoulder Press",
-         "weight": "35 lb",
-         "instruction": "Heavier press — sit for stability. Drive through the heel of your palm. Core must stay rigid to protect the lower back."},
-        {"requires": {"dumbbells_light"},
-         "name": "Single-Arm Shoulder Press",
-         "weight": "10 lb",
-         "instruction": "Lighter load — focus on full range of motion. Elbow at 90° at the bottom, full lockout at the top."},
-        {"requires": {"bands_medium"},
-         "name": "Band Overhead Press",
-         "weight": "Medium Band",
-         "instruction": "Stand on the band, hold at shoulder height with both hands, press overhead. Bands provide ascending resistance — hardest at the top."},
-        {"requires": set(),
-         "name": "Pike Push-Ups",
-         "weight": "Bodyweight",
-         "instruction": "Hands on floor, hips high in an inverted V. Lower your head toward the floor bending at the elbows. Targets the shoulder similarly to an overhead press."},
-    ],
-    "lateral_raise": [
-        {"requires": {"dumbbells_light"},
-         "name": "Alternating Lateral Raises",
-         "weight": "5–10 lb",
-         "instruction": "Slight bend in the elbow, raise to shoulder height only. Don't shrug. These add up fast — lighter is smarter here."},
-        {"requires": {"bands_light"},
-         "name": "Band Lateral Raises",
-         "weight": "Light Band",
-         "instruction": "Stand on band, one end in each hand. Raise arms out to the sides. Band tension increases as you raise — squeeze at the top."},
-        {"requires": set(),
-         "name": "Bodyweight Lateral Arm Raises",
-         "weight": "Bodyweight",
-         "instruction": "No weight — just the arm movement. Focus on the mind-muscle connection and squeezing the lateral deltoid. Higher reps, 20–25."},
-    ],
-    "tricep_pushdown": [
-        {"requires": {"bands_medium"},
-         "name": "Band Tricep Pushdowns",
-         "weight": "Medium Band",
-         "instruction": "Anchor band overhead. Keep elbows pinned to your sides and push down until arms are fully extended. Squeeze at the bottom."},
-        {"requires": {"dumbbell_25"},
-         "name": "Single-Arm Overhead Tricep Extension",
-         "weight": "25 lb",
-         "instruction": "Hold dumbbell overhead, lower behind your head by bending the elbow. Keep upper arm still and vertical. Extend back up fully."},
-        {"requires": set(),
-         "name": "Diamond Push-Ups",
-         "weight": "Bodyweight",
-         "instruction": "Hands close together forming a diamond shape under your chest. Elbows track back along your sides. Intense tricep isolation."},
-    ],
-    "pull_up": [
-        {"requires": {"pull_up_bar", "bands_heavy"},
-         "name": "Assisted Pull-Ups (Heavy Band)",
-         "weight": "Band Assisted",
-         "instruction": "Loop heavy band over bar, kneel or stand in loop. Full dead hang at the bottom, chin over bar at the top. Band reduces bodyweight load significantly."},
-        {"requires": {"pull_up_bar", "bands_medium"},
-         "name": "Assisted Pull-Ups (Medium Band)",
-         "weight": "Band Assisted",
-         "instruction": "Medium band assist — less help than heavy band. You're doing more of the work. Good for the transition to unassisted."},
-        {"requires": {"pull_up_bar"},
-         "name": "Pull-Ups",
-         "weight": "Bodyweight",
-         "instruction": "Full dead hang at the bottom, chin over bar at the top. Don't kip — strict reps only. If you can't complete a rep, do a slow negative (jump to top, lower over 5 seconds)."},
-        {"requires": {"bands_heavy"},
-         "name": "Band Pull-Downs",
-         "weight": "Heavy Band",
-         "instruction": "Anchor band above your head. Kneel and pull band down to your chest, driving elbows toward your hips. Mimics the pull-up movement pattern."},
-        {"requires": {"bands_medium"},
-         "name": "Band Rows (Standing)",
-         "weight": "Medium Band",
-         "instruction": "Anchor band at chest height. Pull toward your torso, driving elbows back. Best substitute when no bar is available."},
-        {"requires": set(),
-         "name": "Inverted Rows (Table/Chair)",
-         "weight": "Bodyweight",
-         "instruction": "Lie under a sturdy table, grip the edge, pull your chest up to it. Straight body like a reverse plank. One of the best pull-up substitutes."},
-    ],
-    "bent_over_row": [
-        {"requires": {"dumbbell_35"},
-         "name": "Single-Arm Bent-Over Row",
-         "weight": "35 lb",
-         "instruction": "Brace one hand on a chair or bench. Keep your back flat and parallel to the floor. Drive your elbow back, not up. Squeeze at the top."},
-        {"requires": {"dumbbell_25"},
-         "name": "Single-Arm Bent-Over Row",
-         "weight": "25 lb",
-         "instruction": "Brace one hand for support. Full range of motion — dead hang at the bottom, elbow past your torso at the top. Focus on lat engagement."},
-        {"requires": {"dumbbells_light"},
-         "name": "Single-Arm Bent-Over Row",
-         "weight": "10 lb",
-         "instruction": "Lighter weight — focus on the movement pattern and lat squeeze. Higher reps (15 per side) to compensate."},
-        {"requires": {"bands_medium"},
-         "name": "Band Bent-Over Row",
-         "weight": "Medium Band",
-         "instruction": "Stand on band, hinge forward, row both ends up simultaneously. Drive elbows back and squeeze at the top."},
-        {"requires": set(),
-         "name": "Bodyweight Superman Rows",
-         "weight": "Bodyweight",
-         "instruction": "Lie face down, arms extended. Lift chest and arms simultaneously squeezing the back. Hold 2 seconds at the top. Lower back and repeat."},
-    ],
-    "face_pull": [
-        {"requires": {"bands_light"},
-         "name": "Band Face Pulls",
-         "weight": "Light Band",
-         "instruction": "Anchor band at face height. Pull toward your forehead, elbows flaring up and out. This is your most important posture exercise — don't skip it."},
-        {"requires": {"bands_medium"},
-         "name": "Band Face Pulls",
-         "weight": "Medium Band",
-         "instruction": "Anchor band at face height. Pull toward your forehead with elbows high. More resistance — focus on controlled reps."},
-        {"requires": set(),
-         "name": "Prone Y-T-W Raises",
-         "weight": "Bodyweight",
-         "instruction": "Lie face down. Raise arms into a Y shape (overhead), then T (out to sides), then W (bent elbows, hands near ears). Each letter is one rep cycle. Targets the exact same muscles as face pulls."},
-    ],
-    "bicep_curl": [
-        {"requires": {"dumbbell_25"},
-         "name": "Alternating Dumbbell Curls",
-         "weight": "25 lb",
-         "instruction": "Supinate (rotate) the wrist as you curl up. Don't swing — keep upper arms pinned to your sides. Full extension at the bottom."},
-        {"requires": {"dumbbells_light"},
-         "name": "Alternating Dumbbell Curls",
-         "weight": "8–10 lb",
-         "instruction": "Full range of motion. Squeeze at the top, controlled descent. Higher reps (15 per side) to compensate for lighter weight."},
-        {"requires": {"bands_medium"},
-         "name": "Band Bicep Curls",
-         "weight": "Medium Band",
-         "instruction": "Stand on band, curl both ends up simultaneously. Bands provide constant tension — there's no easy spot in the range of motion."},
-        {"requires": set(),
-         "name": "Isometric Towel Curls",
-         "weight": "Bodyweight",
-         "instruction": "Loop a towel under your foot. Pull the towel up with both hands like a curl, resisting with your foot. Not ideal but targets the bicep with zero equipment."},
-    ],
-    "goblet_squat": [
-        {"requires": {"dumbbell_35"},
-         "name": "Goblet Squat",
-         "weight": "35 lb",
-         "instruction": "Hold dumbbell at chest height in both hands. Feet shoulder-width, toes slightly out. Squat deep, keeping chest tall. Drive knees out over toes."},
-        {"requires": {"dumbbell_25"},
-         "name": "Goblet Squat",
-         "weight": "25 lb",
-         "instruction": "Hold dumbbell at chest height. Focus on depth and chest position. Heels flat, drive knees out. Full range of motion every rep."},
-        {"requires": {"weight_vest"},
-         "name": "Weighted Squat (Vest)",
-         "weight": "Weight Vest",
-         "instruction": "Vest on, hands clasped at chest or extended forward for balance. Squat as deep as mobility allows. The vest loads your spine — keep it absolutely upright."},
-        {"requires": {"bands_heavy"},
-         "name": "Banded Squat",
-         "weight": "Heavy Band",
-         "instruction": "Band across upper back, held at shoulders. Squat to depth. Band adds resistance at the top where bodyweight squats get too easy."},
-        {"requires": set(),
-         "name": "Bodyweight Squat",
-         "weight": "Bodyweight",
-         "instruction": "Arms out front for balance. Squat as deep as possible, chest tall. Slow the descent (3 seconds down) to increase difficulty without added weight."},
-    ],
-    "romanian_deadlift": [
-        {"requires": {"dumbbell_35"},
-         "name": "Single-Leg Romanian Deadlift",
-         "weight": "35 lb",
-         "instruction": "Hold dumbbell in opposite hand to working leg. Hinge at the hip, let the free leg trail back. Keep back flat. Feel the hamstring stretch at the bottom."},
-        {"requires": {"dumbbell_25"},
-         "name": "Single-Leg Romanian Deadlift",
-         "weight": "25 lb",
-         "instruction": "Opposite hand holds the weight. Hinge slowly — balance is the challenge here. If unstable, lightly touch your free toe to the floor."},
-        {"requires": {"dumbbells_light"},
-         "name": "Single-Leg Romanian Deadlift",
-         "weight": "10 lb",
-         "instruction": "Light weight — really focus on the hamstring stretch and hip hinge pattern. Touch the dumbbell to the floor if mobility allows."},
-        {"requires": set(),
-         "name": "Single-Leg Hip Hinge",
-         "weight": "Bodyweight",
-         "instruction": "Arms out for balance. Hinge forward on one leg, free leg trails back. Touch your fingers to the floor if possible. The hamstring and glute still get a strong stimulus."},
-    ],
-    "reverse_lunge": [
-        {"requires": {"weight_vest"},
-         "name": "Reverse Lunges (Weight Vest)",
-         "weight": "Weight Vest",
-         "instruction": "Step back, lower the back knee toward the floor. Keep front shin vertical. Drive through the front heel to return. Control the descent."},
-        {"requires": {"dumbbell_25"},
-         "name": "Single-Arm Reverse Lunge",
-         "weight": "25 lb",
-         "instruction": "Hold dumbbell in one hand, alternate sides. The offset load challenges your core and balance on top of the leg work."},
-        {"requires": set(),
-         "name": "Reverse Lunges",
-         "weight": "Bodyweight",
-         "instruction": "Step back, lower back knee toward the floor. Front shin stays vertical. Slow 3-second descent to maximize time under tension without added weight."},
-    ],
-    "glute_bridge": [
-        {"requires": {"leg_weights"},
-         "name": "Glute Bridges (Leg Weights)",
-         "weight": "Leg Weights",
-         "instruction": "Lie on back, feet flat, leg weights strapped on. Drive hips up by squeezing glutes hard. Hold at top for 1 second. Lower slowly."},
-        {"requires": {"dumbbell_25"},
-         "name": "Dumbbell Glute Bridge",
-         "weight": "25 lb",
-         "instruction": "Rest 25 lb dumbbell across your hips. Drive hips up and squeeze hard at the top. The extra load makes even low reps effective."},
-        {"requires": {"bands_medium"},
-         "name": "Banded Glute Bridge",
-         "weight": "Medium Band",
-         "instruction": "Band across hips anchored by your hands. Bridges as normal — band adds resistance at the top of the movement where glutes are most engaged."},
-        {"requires": set(),
-         "name": "Glute Bridges",
-         "weight": "Bodyweight",
-         "instruction": "Drive hips up, hold 2 seconds at the top, lower slowly. Higher reps (25–30) to compensate for no external load. Squeeze hard every rep."},
-    ],
-    "thruster": [
-        {"requires": {"dumbbell_25"},
-         "name": "Single-Arm Dumbbell Thruster",
-         "weight": "25 lb",
-         "instruction": "Squat to press combined. Hold dumbbell at shoulder, squat down, drive up and press overhead in one fluid motion. Alternate sides each rep."},
-        {"requires": {"dumbbells_light"},
-         "name": "Single-Arm Dumbbell Thruster",
-         "weight": "10 lb",
-         "instruction": "Lighter thruster — focus on the fluid squat-to-press connection. Higher reps (10 per side) to compensate."},
-        {"requires": {"bands_medium"},
-         "name": "Band Thruster",
-         "weight": "Medium Band",
-         "instruction": "Stand on band, hold at shoulders. Squat down, drive up and press overhead in one movement. Bands make the top half hardest — push through it."},
-        {"requires": set(),
-         "name": "Jump Squat to Overhead Reach",
-         "weight": "Bodyweight",
-         "instruction": "Squat down, explode up into a jump reaching both arms overhead. Land soft. This is a full-body power movement — pure conditioning when no weights are available."},
-    ],
-}
-
-
-def resolve_exercise(exercise_key, owned_equipment, sets, reps, rest):
-    """Pick the best variation of an exercise based on owned equipment."""
-    variations = EXERCISE_VARIATIONS.get(exercise_key, [])
-    for variation in variations:
-        if variation["requires"].issubset(owned_equipment):
-            return {
-                "name": variation["name"],
-                "sets": sets,
-                "reps": reps,
-                "rest": rest,
-                "weight": variation["weight"],
-                "instruction": variation["instruction"],
-            }
-    # Fallback — last variation always has empty requires set
-    fallback = variations[-1] if variations else {}
-    return {
-        "name": fallback.get("name", exercise_key),
-        "sets": sets,
-        "reps": reps,
-        "rest": rest,
-        "weight": fallback.get("weight", "Bodyweight"),
-        "instruction": fallback.get("instruction", ""),
-    }
-
-
-def build_workout_for_equipment(day_key, owned_equipment):
-    """Return a workout day's exercise list resolved for current equipment."""
-    base = WORKOUT_PLAN[day_key]
-
-    # Map each exercise in the static plan to its variation key
-    EXERCISE_KEY_MAP = {
-        "Day 1": [
-            ("chest_press",     3, "8–12 per side", 60),
-            ("chest_press",     3, "10–15",          60),   # push-up handles variation
-            ("shoulder_press",  3, "8–10 per side",  60),
-            ("lateral_raise",   3, "12–15 per side", 45),
-            ("tricep_pushdown", 3, "15",              45),
-            ("tricep_pushdown", 3, "10–12 per side",  45),
-            # Core exercises are always bodyweight — keep as-is
-        ],
-        "Day 2": [
-            ("pull_up",         3, "6–10",            90),
-            ("bent_over_row",   3, "10–12 per side",  60),
-            ("face_pull",       3, "15",              45),
-            ("face_pull",       3, "20",              30),   # pull-aparts
-            ("bicep_curl",      3, "10–12 per side",  45),
-            ("bicep_curl",      3, "10 per side",     45),   # hammer curl slot
-        ],
-        "Day 3": [
-            ("goblet_squat",       3, "12–15",         60),
-            ("romanian_deadlift",  3, "8–10 per side", 60),
-            ("reverse_lunge",      3, "12 per leg",    60),
-            ("glute_bridge",       3, "20",            45),
-        ],
-        "Day 4": [
-            ("chest_press",        4, "10",            15),
-            ("pull_up",            4, "8",             15),
-            ("thruster",           4, "5 per side",    15),
-            ("romanian_deadlift",  4, "5 per side",    15),
-            ("glute_bridge",       4, "15",            15),
-        ],
-    }
-
-    resolved = []
-    for key, sets, reps, rest in EXERCISE_KEY_MAP.get(day_key, []):
-        resolved.append(resolve_exercise(key, owned_equipment, sets, reps, rest))
-
-    # Always append the bodyweight-only exercises (core, jump rope finisher, dead hangs)
-    STATIC_EXTRAS = {
-        "Day 1": [
-            {"name": "Plank", "sets": 3, "reps": "45 sec", "weight": "Bodyweight",
-             "rest": 30, "type": "timed", "duration": 45,
-             "instruction": "Forearms or hands. Keep hips level — don't let them sag or pike up. Squeeze glutes and abs throughout."},
-            {"name": "Dead Bugs", "sets": 3, "reps": "10 per side", "weight": "Bodyweight",
-             "rest": 30,
-             "instruction": "Lying on back, arms up, knees at 90°. Lower opposite arm and leg slowly while pressing lower back into the floor. Exhale as you lower."},
-            {"name": "Bicycle Crunches", "sets": 3, "reps": "20", "weight": "Bodyweight",
-             "rest": 30,
-             "instruction": "Slow and controlled. Rotate your shoulder toward the knee, not just your elbow. Keep lower back pressed down."},
-        ],
-        "Day 2": [
-            {"name": "Dead Hangs", "sets": 3, "reps": "20–30 sec", "weight": "Bodyweight",
-             "rest": 45, "type": "timed", "duration": 25,
-             "instruction": "Full grip on the bar, let your body hang completely. Builds grip strength and decompresses your spine. Breathe slowly."
-             } if "pull_up_bar" in owned_equipment else
-            {"name": "Band Pull-Aparts", "sets": 3, "reps": "20", "weight": "Light Band",
-             "rest": 30,
-             "instruction": "Hold band at chest width, pull apart until band touches your chest. Squeeze shoulder blades together. Controlled return."},
-        ],
-        "Day 3": [
-            {"name": "Donkey Kicks (Leg Weights)" if "leg_weights" in owned_equipment else "Donkey Kicks",
-             "sets": 3, "reps": "15 per side",
-             "weight": "Leg Weights" if "leg_weights" in owned_equipment else "Bodyweight",
-             "rest": 30,
-             "instruction": "On all fours. Keep the 90° bend in your knee and kick straight up. Squeeze the glute at the top. Hips stay level."},
-            {"name": "Banded Lateral Walks" if "bands_medium" in owned_equipment else "Lateral Walks",
-             "sets": 3, "reps": "15 steps each way",
-             "weight": "Medium Band" if "bands_medium" in owned_equipment else "Bodyweight",
-             "rest": 30,
-             "instruction": "Band around thighs above knees. Slight squat position, step side to side maintaining band tension. Burns the outer glute." if "bands_medium" in owned_equipment else "Stay in a half-squat, step side to side with controlled movement. Slow pace maximises glute activation."},
-            {"name": "Jump Rope Intervals" if "jump_rope" in owned_equipment else "High Knees Intervals",
-             "sets": 5, "reps": "30s on / 15s off",
-             "weight": "Bodyweight",
-             "rest": 15, "type": "timed", "duration": 30,
-             "instruction": "Push the pace. This is conditioning. Breathe rhythmically and maintain form even when tired." if "jump_rope" in owned_equipment else "Drive knees up to hip height, arms pumping. Same cardio stimulus as jump rope with no equipment needed."},
-        ],
-        "Day 4": [
-            {"name": "Jump Rope" if "jump_rope" in owned_equipment else "High Knees",
-             "sets": 4, "reps": "30 seconds",
-             "weight": "Bodyweight",
-             "rest": 60, "type": "timed", "duration": 30,
-             "instruction": "Round finisher. Push hard. After this, rest 60 seconds and start the next round." if "jump_rope" in owned_equipment else "Drive knees to hip height, arms pumping. Same intensity as jump rope. Round finisher — push hard."},
-        ],
-    }
-
-    resolved.extend(STATIC_EXTRAS.get(day_key, []))
-    return resolved
-
-
 def load_progress():
     try:
         if os.path.exists(PROGRESS_FILE):
             with open(PROGRESS_FILE, 'r') as f:
                 return json.load(f)
-    except (json.JSONDecodeError, IOError):
+    except Exception:
         pass
     return {"completed_workouts": [], "total_sets": 0, "total_workouts": 0, "streak": 0, "last_date": ""}
 
@@ -859,9 +343,437 @@ def save_progress(data):
     except IOError:
         pass
 
+
 # ─────────────────────────────────────────────
-# CUSTOM WIDGETS
+# EXERCISE VARIATION LIBRARY
+# Every slot routes through here. Last entry always has requires=set() as fallback.
 # ─────────────────────────────────────────────
+EXERCISE_VARIATIONS = {
+    "chest_press": [
+        # Barbell + bench (best)
+        {"requires": {"barbell", "bench_adjustable", "squat_rack"}, "name": "Barbell Bench Press", "weight": "Working weight",
+         "instruction": "Lie on adjustable bench, grip just wider than shoulders. Lower bar to mid-chest with control, press back up to full lockout. Keep feet flat, shoulder blades retracted and depressed throughout."},
+        {"requires": {"barbell", "bench_flat", "squat_rack"}, "name": "Barbell Bench Press", "weight": "Working weight",
+         "instruction": "Lie on flat bench, grip just wider than shoulders. Lower bar to mid-chest with control, drive up to full lockout. Keep shoulder blades squeezed together and feet flat on the floor."},
+        {"requires": {"barbell", "bench_flat"}, "name": "Barbell Bench Press", "weight": "Working weight",
+         "instruction": "Flat bench, grip just wider than shoulders. Lower bar to mid-chest, press to lockout. Have a spotter or use a power rack with safeties if going heavy."},
+        {"requires": {"barbell", "squat_rack"}, "name": "Barbell Floor Press", "weight": "Working weight",
+         "instruction": "Lie on the floor under the bar set in the rack at a low height. Lower to elbows touching floor, press back up. Great chest and tricep builder with a natural range-of-motion limit."},
+        # Dumbbells + bench
+        {"requires": {"dumbbells_heavy", "bench_flat"}, "name": "Dumbbell Bench Press", "weight": "30–50 lb each",
+         "instruction": "Lie on flat bench, dumbbells at chest level. Press up to lockout, slight arc inward at the top. Full range of motion — lower until elbows are just below bench level."},
+        {"requires": {"dumbbells_heavy", "bench_adjustable"}, "name": "Dumbbell Bench Press", "weight": "30–50 lb each",
+         "instruction": "Adjustable bench flat or slightly inclined. Press dumbbells up to lockout. The slight incline variation shifts more load to the upper chest."},
+        {"requires": {"dumbbells_medium", "bench_flat"}, "name": "Dumbbell Bench Press", "weight": "12–25 lb each",
+         "instruction": "Lie on flat bench. Press dumbbells up to lockout, slight arc inward at the top. Full range of motion every rep."},
+        {"requires": {"dumbbells_medium", "bench_adjustable"}, "name": "Dumbbell Bench Press", "weight": "12–25 lb each",
+         "instruction": "Flat or slight incline. Press up to lockout, control the descent. Elbows at about 75° — not flared all the way out."},
+        # Dumbbells only (floor press)
+        {"requires": {"dumbbells_heavy"}, "name": "Dumbbell Floor Press", "weight": "30–50 lb each",
+         "instruction": "Lie on the floor, dumbbells at chest level. Press up to lockout. The floor stops your range at the natural end point — heavier weight, less shoulder strain."},
+        {"requires": {"dumbbells_medium"}, "name": "Dumbbell Floor Press", "weight": "12–25 lb each",
+         "instruction": "Lie on floor, press dumbbells up to lockout. Full press at the top, elbows just touch the floor at the bottom."},
+        {"requires": {"dumbbell_35"}, "name": "Single-Arm Floor Press", "weight": "35 lb",
+         "instruction": "Lie on your back, press one arm at a time. Brace your core against the rotation. Drive through your chest."},
+        {"requires": {"dumbbell_25"}, "name": "Single-Arm Floor Press", "weight": "25 lb",
+         "instruction": "Lie on your back, press one arm at a time. The uneven load forces anti-rotation core work. Drive through your chest."},
+        # Bodyweight options
+        {"requires": {"push_up_handles"}, "name": "Rotating Push-Up Handles", "weight": "Bodyweight",
+         "instruction": "Let handles rotate naturally as you push up. Reduces wrist strain and deepens chest activation. Rigid plank throughout."},
+        {"requires": {"bands_medium"}, "name": "Band Push-Up", "weight": "Medium Band",
+         "instruction": "Loop band across your upper back, hold ends in each hand. Push-up as normal — band adds resistance at the top."},
+        {"requires": set(), "name": "Push-Ups", "weight": "Bodyweight",
+         "instruction": "Hands slightly wider than shoulders. Lower chest to within an inch of the floor. Full lockout at the top."},
+    ],
+    "shoulder_press": [
+        # Barbell
+        {"requires": {"barbell", "bench_adjustable"}, "name": "Seated Barbell Overhead Press", "weight": "Working weight",
+         "instruction": "Set bench to 90°. Grip just outside shoulder width, press bar overhead to full lockout. Lower to chin height. Keep core braced — don't hyperextend your lower back."},
+        {"requires": {"barbell", "squat_rack"}, "name": "Standing Barbell Overhead Press", "weight": "Working weight",
+         "instruction": "Grip just outside shoulders, bar resting on upper chest. Brace your whole body and press straight overhead to lockout. Lower under control. Feet shoulder-width."},
+        {"requires": {"barbell"}, "name": "Standing Barbell Overhead Press", "weight": "Working weight",
+         "instruction": "Grip just outside shoulders, press straight overhead to lockout. Keep ribs down and core tight — don't lean back to grind reps."},
+        # Dumbbells + bench
+        {"requires": {"dumbbells_heavy", "bench_adjustable"}, "name": "Seated Dumbbell Shoulder Press", "weight": "30–50 lb each",
+         "instruction": "Set bench to 90°. Press dumbbells overhead to lockout from ear level. Lower until elbows are just below shoulder height. Seated removes the temptation to use leg drive."},
+        {"requires": {"dumbbells_medium", "bench_adjustable"}, "name": "Seated Dumbbell Shoulder Press", "weight": "12–25 lb each",
+         "instruction": "Bench at 90°. Press overhead to lockout. Keep shoulder blades pulled back against the bench. Don't let the dumbbells drift forward."},
+        # Dumbbells standing
+        {"requires": {"dumbbells_heavy"}, "name": "Standing Dumbbell Shoulder Press", "weight": "30–50 lb each",
+         "instruction": "Stand, press both dumbbells overhead simultaneously. Brace your core to avoid arching your lower back. Full lockout at the top."},
+        {"requires": {"dumbbells_medium"}, "name": "Standing Dumbbell Shoulder Press", "weight": "12–25 lb each",
+         "instruction": "Stand, press overhead to lockout. Keep your ribs down and core braced. Don't use a push from your legs — strict press."},
+        {"requires": {"dumbbell_35"}, "name": "Single-Arm Shoulder Press", "weight": "35 lb",
+         "instruction": "Sit for stability. Drive through the heel of your palm. Core must stay rigid to protect the lower back."},
+        {"requires": {"dumbbell_25"}, "name": "Single-Arm Shoulder Press", "weight": "25 lb",
+         "instruction": "Stand or sit. Brace your core hard to resist leaning to the side. Press straight up, don't flare the elbow out too wide."},
+        {"requires": {"dumbbells_light"}, "name": "Single-Arm Shoulder Press", "weight": "8–10 lb",
+         "instruction": "Lighter load — focus on full range of motion. Elbow at 90° at bottom, full lockout at top. Higher reps."},
+        {"requires": {"bands_medium"}, "name": "Band Overhead Press", "weight": "Medium Band",
+         "instruction": "Stand on the band, hold at shoulder height, press overhead. Ascending resistance — hardest at the top."},
+        {"requires": set(), "name": "Pike Push-Ups", "weight": "Bodyweight",
+         "instruction": "Hands on floor, hips high in an inverted V. Lower your head toward the floor bending at the elbows. Targets the shoulder."},
+    ],
+    "lateral_raise": [
+        {"requires": {"dumbbells_medium"}, "name": "Alternating Lateral Raises", "weight": "12–15 lb",
+         "instruction": "Slight bend in the elbow, raise to shoulder height only. Don't shrug. These add up fast — don't go too heavy."},
+        {"requires": {"dumbbells_light"}, "name": "Alternating Lateral Raises", "weight": "5–10 lb",
+         "instruction": "Slight bend in the elbow, raise to shoulder height only. Don't shrug. Lighter is smarter here."},
+        {"requires": {"bands_light"}, "name": "Band Lateral Raises", "weight": "Light Band",
+         "instruction": "Stand on band, one end in each hand. Raise arms out to sides. Tension increases as you raise — squeeze at the top."},
+        {"requires": set(), "name": "Bodyweight Lateral Raises", "weight": "Bodyweight",
+         "instruction": "No weight — focus on squeezing the lateral deltoid. 20–25 reps, slow and deliberate."},
+    ],
+    "tricep_ext": [
+        # Cable machine (best)
+        {"requires": {"cable_machine"}, "name": "Cable Tricep Pushdowns (Rope)", "weight": "Light–Moderate",
+         "instruction": "Rope attachment, set cable high. Elbows pinned to sides, push rope down and flare hands out at the bottom. Full extension and squeeze every rep."},
+        # Barbell
+        {"requires": {"barbell", "bench_flat"}, "name": "Skull Crushers (EZ or Straight Bar)", "weight": "Light–Moderate",
+         "instruction": "Lie on bench, arms extended over your chest. Lower bar toward your forehead bending only at the elbows. Upper arms stay vertical. Press back to full extension."},
+        {"requires": {"barbell"}, "name": "Skull Crushers (Floor)", "weight": "Light–Moderate",
+         "instruction": "Lie on the floor, arms extended over chest. Lower bar toward forehead, upper arms stay vertical. Press back up. Floor limits range slightly — keep it controlled."},
+        # Dumbbells
+        {"requires": {"dumbbells_heavy", "bench_flat"}, "name": "Dumbbell Skull Crushers", "weight": "20–35 lb each",
+         "instruction": "Lie on bench, arms extended over chest. Lower dumbbells toward your temples bending only at the elbows. Press back to lockout. Keep upper arms perfectly vertical."},
+        {"requires": {"dumbbells_medium"}, "name": "Two-Arm Overhead Tricep Extension", "weight": "12–25 lb",
+         "instruction": "Hold one dumbbell with both hands overhead. Lower behind head, elbows pointing forward. Full extension at the top. Good stretch at the bottom."},
+        {"requires": {"bands_medium"}, "name": "Band Tricep Pushdowns", "weight": "Medium Band",
+         "instruction": "Anchor band overhead. Keep elbows pinned to your sides and push down until arms fully extended. Squeeze at the bottom."},
+        {"requires": {"dumbbell_25"}, "name": "Single-Arm Overhead Tricep Extension", "weight": "25 lb",
+         "instruction": "Hold dumbbell overhead, lower behind head by bending elbow. Keep upper arm still and vertical. Extend back up fully."},
+        {"requires": {"dumbbells_light"}, "name": "Two-Arm Overhead Tricep Extension", "weight": "8–10 lb",
+         "instruction": "Hold one dumbbell with both hands overhead. Lower behind head, elbows pointing forward. Full extension at the top."},
+        {"requires": {"bands_light"}, "name": "Band Tricep Pushdowns", "weight": "Light Band",
+         "instruction": "Anchor band overhead. Elbows pinned to sides, push straight down. Full extension and squeeze at the bottom."},
+        {"requires": set(), "name": "Diamond Push-Ups", "weight": "Bodyweight",
+         "instruction": "Hands close together forming a diamond shape under your chest. Elbows track back along your sides. Intense tricep isolation."},
+    ],
+    "plank": [
+        {"requires": {"ab_wheel"}, "name": "Ab Wheel Rollouts", "weight": "Bodyweight", "type": "reps", "reps_override": "8–10",
+         "instruction": "Kneel, grip ab wheel with both hands. Roll forward slowly until nearly parallel to floor. Pull back using your core. Don't let lower back sag."},
+        {"requires": {"stability_ball"}, "name": "Stability Ball Plank", "weight": "Bodyweight", "type": "timed", "duration": 45,
+         "instruction": "Forearms on stability ball, body in straight plank line. Unstable surface forces your core to work twice as hard. Hold perfectly still."},
+        {"requires": set(), "name": "Plank", "weight": "Bodyweight", "type": "timed", "duration": 45,
+         "instruction": "Forearms or hands. Keep hips level — don't let them sag or pike up. Squeeze glutes and abs throughout."},
+    ],
+    "dead_bug": [
+        {"requires": {"dumbbells_light"}, "name": "Dead Bugs with Dumbbells", "weight": "3–5 lb",
+         "instruction": "Hold light dumbbells pointing to ceiling. Lying on back, lower opposite arm and leg slowly. Added weight increases anti-rotation demand."},
+        {"requires": set(), "name": "Dead Bugs", "weight": "Bodyweight",
+         "instruction": "Lying on back, arms up, knees at 90°. Lower opposite arm and leg slowly while pressing lower back into the floor. Exhale as you lower."},
+    ],
+    "crunch": [
+        {"requires": {"ab_crunch_machine"}, "name": "Ab Crunch Machine", "weight": "Light–Medium",
+         "instruction": "Controlled tempo — 2 seconds down, 1 second up. Don't use momentum. Feel the contraction at the top of every rep."},
+        {"requires": {"stability_ball"}, "name": "Stability Ball Crunches", "weight": "Bodyweight",
+         "instruction": "Sit on ball, walk feet forward until lower back supported by ball. Crunch up. Curved surface increases the range of motion vs floor crunches."},
+        {"requires": set(), "name": "Bicycle Crunches", "weight": "Bodyweight",
+         "instruction": "Slow and controlled. Rotate your shoulder toward the knee, not just your elbow. Keep lower back pressed down."},
+    ],
+    "pull_up": [
+        {"requires": {"pull_up_bar", "bands_heavy"}, "name": "Assisted Pull-Ups (Heavy Band)", "weight": "Band Assisted",
+         "instruction": "Loop heavy band over bar, kneel or stand in loop. Full dead hang at bottom, chin over bar at top. Band reduces bodyweight load significantly."},
+        {"requires": {"pull_up_bar", "bands_medium"}, "name": "Assisted Pull-Ups (Medium Band)", "weight": "Band Assisted",
+         "instruction": "Medium band assist — you're doing more of the work. Good for the transition to unassisted."},
+        {"requires": {"pull_up_bar"}, "name": "Pull-Ups", "weight": "Bodyweight",
+         "instruction": "Full dead hang at bottom, chin over bar at top. Don't kip — strict reps only. If you can't complete a rep, do a slow 5-second negative."},
+        {"requires": {"lat_pulldown"}, "name": "Lat Pulldown Machine", "weight": "Moderate",
+         "instruction": "Grip slightly wider than shoulder width. Pull bar to upper chest, squeezing lats at bottom. Controlled return."},
+        {"requires": {"bands_heavy"}, "name": "Band Pull-Downs", "weight": "Heavy Band",
+         "instruction": "Anchor band above your head. Kneel and pull down to chest, driving elbows toward your hips. Mimics the pull-up pattern."},
+        {"requires": {"trx"}, "name": "TRX Rows", "weight": "Bodyweight",
+         "instruction": "Lean back holding TRX handles. Pull chest to hands squeezing shoulder blades. The more horizontal your body, the harder it is."},
+        {"requires": set(), "name": "Inverted Rows (Table)", "weight": "Bodyweight",
+         "instruction": "Lie under a sturdy table, grip the edge, pull chest up to it. Straight body like a reverse plank. One of the best pull-up substitutes."},
+    ],
+    "chin_up": [
+        {"requires": {"pull_up_bar", "bands_heavy"}, "name": "Assisted Chin-Ups (Heavy Band)", "weight": "Band Assisted",
+         "instruction": "Underhand grip, loop heavy band over bar. Full range of motion — dead hang to chin over bar."},
+        {"requires": {"pull_up_bar", "bands_medium"}, "name": "Assisted Chin-Ups (Medium Band)", "weight": "Band Assisted",
+         "instruction": "Underhand grip, medium band assist. You're doing most of the work. Focus on the bicep at the top."},
+        {"requires": {"pull_up_bar"}, "name": "Chin-Ups", "weight": "Bodyweight",
+         "instruction": "Underhand grip (easier than pull-ups). Full range of motion. Use band assist if needed to complete all reps with good form."},
+        {"requires": {"lat_pulldown"}, "name": "Underhand Lat Pulldown", "weight": "Moderate",
+         "instruction": "Underhand (supinated) grip at shoulder width. Pull to upper chest. More bicep involvement than overhand pulldown."},
+        {"requires": set(), "name": "Negative Chin-Up Holds", "weight": "Bodyweight",
+         "instruction": "Jump to top position (chin over bar) and lower yourself as slowly as possible — aim for 5–8 seconds. Excellent strength builder."},
+    ],
+    "bent_over_row": [
+        # Barbell (best)
+        {"requires": {"barbell", "squat_rack"}, "name": "Barbell Bent-Over Row", "weight": "Working weight",
+         "instruction": "Hinge to about 45°, overhand grip just outside shoulders. Pull bar to your lower chest, driving elbows back. Lower under control. Keep back flat throughout — don't round."},
+        {"requires": {"barbell"}, "name": "Barbell Bent-Over Row", "weight": "Working weight",
+         "instruction": "Hinge to 45°, pull bar to lower chest. Drive elbows back and squeeze shoulder blades at the top. This is the single best back mass builder — own it."},
+        # Dumbbells + bench
+        {"requires": {"dumbbells_heavy", "bench_flat"}, "name": "Chest-Supported Dumbbell Row", "weight": "30–50 lb each",
+         "instruction": "Set bench to low incline, lie face-down. Row both dumbbells up simultaneously. Chest supported means no cheating — pure back work."},
+        {"requires": {"dumbbells_medium", "bench_flat"}, "name": "Chest-Supported Dumbbell Row", "weight": "12–25 lb each",
+         "instruction": "Bench to low incline, lie face-down. Row both dumbbells up. Squeeze shoulder blades at the top. The support removes lower back fatigue entirely."},
+        # Dumbbells only
+        {"requires": {"dumbbells_heavy"}, "name": "Dumbbell Bent-Over Row", "weight": "30–50 lb each",
+         "instruction": "Hinge forward, back flat. Row both dumbbells simultaneously to your lower ribs. Drive elbows back. Squeeze at the top."},
+        {"requires": {"dumbbell_35"}, "name": "Single-Arm Bent-Over Row", "weight": "35 lb",
+         "instruction": "Brace one hand on a chair or bench. Keep your back flat and parallel to floor. Drive your elbow back, not up. Squeeze at the top."},
+        {"requires": {"dumbbell_25"}, "name": "Single-Arm Bent-Over Row", "weight": "25 lb",
+         "instruction": "Brace one hand for support. Full range of motion — dead hang at bottom, elbow past torso at top. Focus on lat engagement."},
+        {"requires": {"dumbbells_light"}, "name": "Single-Arm Bent-Over Row", "weight": "8–10 lb",
+         "instruction": "Lighter weight — focus on movement pattern and lat squeeze. Higher reps (15 per side) to compensate."},
+        {"requires": {"seated_row"}, "name": "Seated Cable Row", "weight": "Moderate",
+         "instruction": "Sit upright, pull handle to lower chest. Lead with your elbows. Squeeze shoulder blades together at the end of every rep."},
+        {"requires": {"bands_medium"}, "name": "Band Bent-Over Row", "weight": "Medium Band",
+         "instruction": "Stand on band, hinge forward, row both ends up simultaneously. Drive elbows back and squeeze at the top."},
+        {"requires": set(), "name": "Bodyweight Superman Rows", "weight": "Bodyweight",
+         "instruction": "Lie face down, arms extended. Lift chest and arms simultaneously squeezing the back. Hold 2 seconds at top. Lower and repeat."},
+    ],
+    "face_pull": [
+        {"requires": {"cable_machine"}, "name": "Cable Face Pulls", "weight": "Light",
+         "instruction": "Cable at face height with rope attachment. Pull toward your forehead, elbows flaring high. Your most important posture exercise."},
+        {"requires": {"bands_light"}, "name": "Band Face Pulls", "weight": "Light Band",
+         "instruction": "Anchor band at face height. Pull toward your forehead, elbows flaring up and out. Don't skip this one."},
+        {"requires": {"bands_medium"}, "name": "Band Face Pulls", "weight": "Medium Band",
+         "instruction": "Anchor band at face height. Pull toward your forehead with elbows high. More resistance — focus on controlled reps."},
+        {"requires": set(), "name": "Prone Y-T-W Raises", "weight": "Bodyweight",
+         "instruction": "Lie face down. Raise arms into Y (overhead), T (out to sides), W (bent elbows near ears). Each letter is one rep cycle. Same muscles as face pulls."},
+    ],
+    "pull_apart": [
+        {"requires": {"bands_light"}, "name": "Band Pull-Aparts", "weight": "Light Band",
+         "instruction": "Hold band at chest width, arms straight. Pull apart until band touches chest, squeezing shoulder blades. Controlled return."},
+        {"requires": {"bands_medium"}, "name": "Band Pull-Aparts", "weight": "Medium Band",
+         "instruction": "More resistance — keep movement strict. Pull apart until band touches chest, full rear delt squeeze at the end."},
+        {"requires": set(), "name": "Prone T Raises", "weight": "Bodyweight",
+         "instruction": "Lie face down, arms out to sides in a T shape. Lift arms off floor squeezing shoulder blades. Hold 2 seconds at top. Same muscles as pull-aparts."},
+    ],
+    "bicep_curl": [
+        {"requires": {"dumbbell_35"}, "name": "Alternating Dumbbell Curls", "weight": "35 lb",
+         "instruction": "Heavy load — strict form is critical. No swinging. Supinate the wrist as you curl up, full extension at the bottom."},
+        {"requires": {"dumbbell_25"}, "name": "Alternating Dumbbell Curls", "weight": "25 lb",
+         "instruction": "Supinate (rotate) the wrist as you curl up. Don't swing — upper arms pinned to your sides. Full extension at the bottom."},
+        {"requires": {"dumbbells_light"}, "name": "Alternating Dumbbell Curls", "weight": "8–10 lb",
+         "instruction": "Full range of motion. Squeeze at top, controlled descent. Higher reps (15 per side) to compensate for lighter weight."},
+        {"requires": {"ez_curl_bar"}, "name": "EZ Bar Curls", "weight": "Light–Moderate",
+         "instruction": "Angled grip reduces wrist strain. Keep elbows pinned to your sides. Full extension at bottom, squeeze at top."},
+        {"requires": {"bands_medium"}, "name": "Band Bicep Curls", "weight": "Medium Band",
+         "instruction": "Stand on band, curl both ends up simultaneously. Constant tension — there's no easy spot in the range of motion."},
+        {"requires": set(), "name": "Isometric Towel Curls", "weight": "Bodyweight",
+         "instruction": "Loop a towel under your foot. Pull with both hands like a curl, resisting with your foot. Zero equipment bicep work."},
+    ],
+    "hammer_curl": [
+        {"requires": {"dumbbell_25"}, "name": "Alternating Hammer Curls", "weight": "25 lb",
+         "instruction": "Neutral grip (thumbs up). Targets the brachialis — the muscle under the bicep that adds width. Same strict form as regular curls."},
+        {"requires": {"dumbbells_light"}, "name": "Alternating Hammer Curls", "weight": "8–10 lb",
+         "instruction": "Neutral grip through full range of motion. Focus on the brachialis contraction."},
+        {"requires": {"bands_medium"}, "name": "Band Hammer Curls", "weight": "Medium Band",
+         "instruction": "Stand on band, curl with a neutral grip (palms facing each other). Elbows pinned to sides throughout."},
+        {"requires": set(), "name": "Neutral-Grip Towel Curls", "weight": "Bodyweight",
+         "instruction": "Towel under your foot, curl with a neutral grip (thumbs up). Targets the same brachialis muscle as hammer curls."},
+    ],
+    "dead_hang": [
+        {"requires": {"pull_up_bar"}, "name": "Dead Hangs", "weight": "Bodyweight", "type": "timed", "duration": 25,
+         "instruction": "Full grip on the bar, let your body hang completely. Builds grip strength and decompresses your spine. Breathe slowly."},
+        {"requires": {"gymnastic_rings"}, "name": "Ring Dead Hangs", "weight": "Bodyweight", "type": "timed", "duration": 25,
+         "instruction": "Hang from the rings with straight arms. Instability recruits more shoulder stabilisers than a fixed bar. Let the shoulders decompress."},
+        {"requires": set(), "name": "Band Pull-Aparts (Finisher)", "weight": "Light Band",
+         "instruction": "Hold band at chest width, pull apart until band touches chest. Great grip and rear delt finisher when no bar is available."},
+    ],
+    "goblet_squat": [
+        # Barbell back squat (best)
+        {"requires": {"barbell", "squat_rack"}, "name": "Barbell Back Squat", "weight": "Working weight",
+         "instruction": "Bar on upper traps (high bar) or lower (low bar). Feet shoulder-width, toes out slightly. Squat to depth — hip crease below the knee. Drive through your whole foot back to lockout."},
+        {"requires": {"barbell"}, "name": "Barbell Front Squat", "weight": "Working weight",
+         "instruction": "Bar resting on front delts, elbows high. Squat deep, chest tall throughout. More upright torso than back squat — excellent quad and core builder."},
+        # Dumbbells
+        {"requires": {"dumbbells_heavy"}, "name": "Dumbbell Goblet Squat", "weight": "30–50 lb",
+         "instruction": "Hold heaviest dumbbell at chest height in both hands. Squat deep, chest tall. Drive knees out over toes."},
+        {"requires": {"dumbbell_35"}, "name": "Goblet Squat", "weight": "35 lb",
+         "instruction": "Hold dumbbell at chest height in both hands. Feet shoulder-width, toes slightly out. Squat deep, keeping chest tall. Drive knees out over toes."},
+        {"requires": {"dumbbell_25"}, "name": "Goblet Squat", "weight": "25 lb",
+         "instruction": "Hold dumbbell at chest height. Focus on depth and chest position. Heels flat, drive knees out. Full range of motion every rep."},
+        {"requires": {"kettlebell_light"}, "name": "Kettlebell Goblet Squat", "weight": "8–16 kg",
+         "instruction": "Hold kettlebell by the horns at chest height. The counterbalance actually helps you sit back further. Chest tall throughout."},
+        {"requires": {"weight_vest"}, "name": "Weighted Squat (Vest)", "weight": "Weight Vest",
+         "instruction": "Vest on, hands clasped at chest. Squat as deep as mobility allows. The vest loads your spine — keep it absolutely upright."},
+        {"requires": {"bands_heavy"}, "name": "Banded Squat", "weight": "Heavy Band",
+         "instruction": "Band across upper back, held at shoulders. Squat to depth. Band adds resistance at the top where bodyweight squats get too easy."},
+        {"requires": set(), "name": "Bodyweight Squat", "weight": "Bodyweight",
+         "instruction": "Arms out front for balance. Squat as deep as possible, chest tall. Slow 3-second descent to increase difficulty."},
+    ],
+    "romanian_deadlift": [
+        # Barbell (best)
+        {"requires": {"barbell"}, "name": "Barbell Romanian Deadlift", "weight": "Working weight",
+         "instruction": "Overhand grip just outside hips. Hinge at the hips, pushing them back as the bar slides down your legs. Feel the hamstring stretch at the bottom. Drive hips forward to return. Back flat throughout."},
+        # Dumbbells + bench
+        {"requires": {"dumbbells_heavy"}, "name": "Dumbbell Romanian Deadlift", "weight": "30–50 lb each",
+         "instruction": "Hold dumbbells in front of thighs. Hinge at hips, lowering dumbbells along your legs. Feel the hamstring stretch. Drive hips forward to stand. Keep back flat."},
+        {"requires": {"dumbbell_35"}, "name": "Single-Leg Romanian Deadlift", "weight": "35 lb",
+         "instruction": "Hold dumbbell in opposite hand to working leg. Hinge at hip, free leg trails back. Back flat. Feel the hamstring stretch at the bottom."},
+        {"requires": {"dumbbell_25"}, "name": "Single-Leg Romanian Deadlift", "weight": "25 lb",
+         "instruction": "Opposite hand holds weight. Hinge slowly — balance is the challenge. If unstable, lightly touch free toe to floor."},
+        {"requires": {"kettlebell_light"}, "name": "Single-Leg Kettlebell RDL", "weight": "8–16 kg",
+         "instruction": "Kettlebell in opposite hand to working leg. Hinge at hip, trail the free leg back. KB shape helps you stay tight through the movement."},
+        {"requires": {"dumbbells_light"}, "name": "Single-Leg Romanian Deadlift", "weight": "8–10 lb",
+         "instruction": "Light weight — focus on the hamstring stretch and hip hinge pattern. Touch the dumbbell to the floor if mobility allows."},
+        {"requires": {"leg_curl"}, "name": "Leg Curl Machine", "weight": "Moderate",
+         "instruction": "Full extension at start, curl to full flexion, squeeze the hamstring. Slow 3-second lowering phase."},
+        {"requires": set(), "name": "Single-Leg Hip Hinge", "weight": "Bodyweight",
+         "instruction": "Arms out for balance. Hinge forward on one leg, free leg trails back. Touch fingers to floor if possible. Hamstring and glute still get a strong stimulus."},
+    ],
+    "reverse_lunge": [
+        {"requires": {"weight_vest"}, "name": "Reverse Lunges (Weight Vest)", "weight": "Weight Vest",
+         "instruction": "Step back, lower back knee toward floor. Keep front shin vertical. Drive through the front heel to return. Control the descent."},
+        {"requires": {"dumbbell_35"}, "name": "Dumbbell Reverse Lunges", "weight": "35 lb",
+         "instruction": "Hold a dumbbell in each hand at your sides. Step back, lower back knee toward floor. Front shin stays vertical."},
+        {"requires": {"dumbbell_25"}, "name": "Single-Arm Reverse Lunge", "weight": "25 lb",
+         "instruction": "Hold dumbbell in one hand, alternate sides. Offset load challenges your core and balance on top of the leg work."},
+        {"requires": {"dumbbells_light"}, "name": "Dumbbell Reverse Lunges", "weight": "8–10 lb",
+         "instruction": "Dumbbells at sides. Step back, controlled descent. Focus on front glute and quad driving you back up."},
+        {"requires": {"bands_medium"}, "name": "Banded Reverse Lunges", "weight": "Medium Band",
+         "instruction": "Band around thighs above knees. Step back into lunge — band forces front knee to stay in line with your foot. Great for glute activation."},
+        {"requires": set(), "name": "Reverse Lunges", "weight": "Bodyweight",
+         "instruction": "Step back, lower back knee toward floor. Front shin stays vertical. Slow 3-second descent to maximize time under tension."},
+    ],
+    "glute_bridge": [
+        {"requires": {"leg_weights"}, "name": "Glute Bridges (Leg Weights)", "weight": "Leg Weights",
+         "instruction": "Lie on back, feet flat, leg weights strapped on. Drive hips up squeezing glutes hard. Hold at top for 1 second. Lower slowly."},
+        {"requires": {"dumbbell_35"}, "name": "Dumbbell Glute Bridge", "weight": "35 lb",
+         "instruction": "Rest dumbbell across your hips. Drive hips up and squeeze hard at the top."},
+        {"requires": {"dumbbell_25"}, "name": "Dumbbell Glute Bridge", "weight": "25 lb",
+         "instruction": "Rest 25 lb dumbbell across hips. Drive hips up and squeeze hard at the top."},
+        {"requires": {"bands_loop"}, "name": "Banded Glute Bridge", "weight": "Loop Band",
+         "instruction": "Loop band just above knees, push knees out against it. Bridge up and hold — band forces glutes to work harder to keep knees apart."},
+        {"requires": {"bands_medium"}, "name": "Banded Glute Bridge", "weight": "Medium Band",
+         "instruction": "Band across hips anchored by your hands. Band adds resistance at the top where glutes are most engaged."},
+        {"requires": set(), "name": "Glute Bridges", "weight": "Bodyweight",
+         "instruction": "Drive hips up, hold 2 seconds at top, lower slowly. Higher reps (25–30) to compensate for no external load. Squeeze hard every rep."},
+    ],
+    "donkey_kick": [
+        {"requires": {"leg_weights"}, "name": "Donkey Kicks (Leg Weights)", "weight": "Leg Weights",
+         "instruction": "On all fours. Keep 90° bend in knee and kick straight up toward ceiling. Squeeze glute at top. Hips stay level."},
+        {"requires": {"bands_loop"}, "name": "Banded Donkey Kicks", "weight": "Loop Band",
+         "instruction": "Loop band around thighs above knees. On all fours, kick back and up against band resistance. Adds load at the peak contraction."},
+        {"requires": set(), "name": "Donkey Kicks", "weight": "Bodyweight",
+         "instruction": "On all fours. Keep 90° bend in knee, kick straight up squeezing glute at top. Hips stay perfectly level. Higher reps (20 per side)."},
+    ],
+    "lateral_walk": [
+        {"requires": {"bands_loop"}, "name": "Banded Lateral Walks", "weight": "Loop Band",
+         "instruction": "Band around thighs just above knees. Slight squat position, stay low throughout. Step side to side maintaining band tension. Burns the gluteus medius."},
+        {"requires": {"bands_medium"}, "name": "Banded Lateral Walks", "weight": "Medium Band",
+         "instruction": "Band around thighs above knees. Slight squat position, step side to side maintaining tension. Burns the outer glute."},
+        {"requires": set(), "name": "Lateral Walks", "weight": "Bodyweight",
+         "instruction": "Stay in a half-squat, step side to side with controlled movement. Slow pace maximises glute activation. Don't stand up between steps."},
+    ],
+    "thruster": [
+        {"requires": {"barbell", "squat_rack"}, "name": "Barbell Thruster", "weight": "Working weight",
+         "instruction": "Bar in front rack position. Squat to depth, drive up explosively and press overhead to lockout in one fluid motion. Re-rack at shoulder height and repeat."},
+        {"requires": {"barbell"}, "name": "Barbell Push Press", "weight": "Working weight",
+         "instruction": "Bar on upper chest, slight knee dip then drive through hips and legs as you press overhead. More weight than strict press — use the leg drive to initiate."},
+        {"requires": {"dumbbells_heavy"}, "name": "Dumbbell Thrusters", "weight": "30–50 lb each",
+         "instruction": "Dumbbells at shoulder height. Squat down, drive up and press overhead in one explosive motion. Land the dumbbells back at shoulders softly."},
+        {"requires": {"dumbbell_35"}, "name": "Single-Arm Dumbbell Thruster", "weight": "35 lb",
+         "instruction": "Squat to press combined. Hold dumbbell at shoulder, squat down, drive up and press overhead in one fluid motion. Alternate sides each rep."},
+        {"requires": {"dumbbell_25"}, "name": "Single-Arm Dumbbell Thruster", "weight": "25 lb",
+         "instruction": "Squat to press combined. Hold dumbbell at shoulder, squat down, drive up and press overhead. Alternate sides each rep."},
+        {"requires": {"kettlebell_light"}, "name": "Kettlebell Thruster", "weight": "8–16 kg",
+         "instruction": "Clean kettlebell to rack position, squat down, drive up pressing overhead. One fluid motion. KB shape forces better wrist and elbow positioning."},
+        {"requires": {"dumbbells_light"}, "name": "Dumbbell Thruster", "weight": "8–10 lb",
+         "instruction": "Lighter load — focus on the fluid squat-to-press connection. Higher reps (10 per side) to compensate."},
+        {"requires": {"bands_medium"}, "name": "Band Thruster", "weight": "Medium Band",
+         "instruction": "Stand on band, hold at shoulders. Squat down, drive up and press overhead. Bands make the top half hardest — push through it."},
+        {"requires": set(), "name": "Jump Squat to Overhead Reach", "weight": "Bodyweight",
+         "instruction": "Squat down, explode up into a jump reaching both arms overhead. Land soft. Full-body power movement — pure conditioning with no equipment."},
+    ],
+    "cardio_finisher": [
+        {"requires": {"jump_rope"}, "name": "Jump Rope", "weight": "Bodyweight", "type": "timed", "duration": 30,
+         "instruction": "Push the pace. This is conditioning. Breathe rhythmically and try to maintain form even when tired."},
+        {"requires": {"assault_bike"}, "name": "Assault Bike Sprint", "weight": "Bodyweight", "type": "timed", "duration": 30,
+         "instruction": "Sprint at maximum effort. Arms and legs driving hard. Your round finisher — give everything."},
+        {"requires": {"rowing_machine"}, "name": "Rowing Sprint", "weight": "Bodyweight", "type": "timed", "duration": 30,
+         "instruction": "Full power rowing stroke — legs drive first, hips open, then arms pull. Maximum effort for the full interval."},
+        {"requires": set(), "name": "High Knees", "weight": "Bodyweight", "type": "timed", "duration": 30,
+         "instruction": "Drive knees up to hip height, arms pumping. Same cardio stimulus as jump rope with no equipment needed."},
+    ],
+}
+
+
+def resolve_exercise(exercise_key, owned_equipment, sets, reps, rest):
+    """Pick the best variation of an exercise based on owned equipment."""
+    variations = EXERCISE_VARIATIONS.get(exercise_key, [])
+    for variation in variations:
+        if variation["requires"].issubset(owned_equipment):
+            result = {
+                "name":        variation["name"],
+                "sets":        sets,
+                "reps":        reps,
+                "rest":        rest,
+                "weight":      variation["weight"],
+                "instruction": variation["instruction"],
+            }
+            if "type" in variation:
+                result["type"] = variation["type"]
+            if "duration" in variation:
+                result["duration"] = variation["duration"]
+            return result
+    # Fallback to last entry (always has requires=set())
+    fallback = variations[-1] if variations else {}
+    result = {
+        "name":        fallback.get("name", exercise_key),
+        "sets":        sets,
+        "reps":        reps,
+        "rest":        rest,
+        "weight":      fallback.get("weight", "Bodyweight"),
+        "instruction": fallback.get("instruction", ""),
+    }
+    if "type" in fallback:
+        result["type"] = fallback["type"]
+    if "duration" in fallback:
+        result["duration"] = fallback["duration"]
+    return result
+
+
+def build_workout_for_equipment(day_key, owned):
+    """Return a fully resolved exercise list. Every slot routes through the variation resolver."""
+    if day_key == "Day 1":
+        return [
+            resolve_exercise("chest_press",    owned, 3, "8–12 per side",  60),
+            resolve_exercise("chest_press",    owned, 3, "10–15",          60),
+            resolve_exercise("shoulder_press", owned, 3, "8–10 per side",  60),
+            resolve_exercise("lateral_raise",  owned, 3, "12–15 per side", 45),
+            resolve_exercise("tricep_ext",     owned, 3, "15",             45),
+            resolve_exercise("tricep_ext",     owned, 3, "10–12 per side", 45),
+            resolve_exercise("plank",          owned, 3, "45 sec",         30),
+            resolve_exercise("dead_bug",       owned, 3, "10 per side",    30),
+            resolve_exercise("crunch",         owned, 3, "20",             30),
+        ]
+    elif day_key == "Day 2":
+        return [
+            resolve_exercise("pull_up",       owned, 3, "6–10",            90),
+            resolve_exercise("bent_over_row", owned, 3, "10–12 per side",  60),
+            resolve_exercise("face_pull",     owned, 3, "15",              45),
+            resolve_exercise("pull_apart",    owned, 3, "20",              30),
+            resolve_exercise("bicep_curl",    owned, 3, "10–12 per side",  45),
+            resolve_exercise("hammer_curl",   owned, 3, "10 per side",     45),
+            resolve_exercise("dead_hang",     owned, 3, "20–30 sec",       45),
+        ]
+    elif day_key == "Day 3":
+        return [
+            resolve_exercise("goblet_squat",      owned, 3, "12–15",             60),
+            resolve_exercise("romanian_deadlift", owned, 3, "8–10 per side",     60),
+            resolve_exercise("reverse_lunge",     owned, 3, "12 per leg",        60),
+            resolve_exercise("glute_bridge",      owned, 3, "20",                45),
+            resolve_exercise("donkey_kick",       owned, 3, "15 per side",       30),
+            resolve_exercise("lateral_walk",      owned, 3, "15 steps each way", 30),
+            resolve_exercise("cardio_finisher",   owned, 5, "30s on / 15s off",  15),
+        ]
+    elif day_key == "Day 4":
+        return [
+            resolve_exercise("chest_press",       owned, 4, "10",         15),
+            resolve_exercise("chin_up",           owned, 4, "8",          15),
+            resolve_exercise("thruster",          owned, 4, "5 per side", 15),
+            resolve_exercise("romanian_deadlift", owned, 4, "5 per side", 15),
+            resolve_exercise("glute_bridge",      owned, 4, "15",         15),
+            resolve_exercise("cardio_finisher",   owned, 4, "30 seconds", 60),
+        ]
+    return []
 
 class ColoredBox(BoxLayout):
     def __init__(self, bg_color='surface', radius=12, **kwargs):
@@ -981,7 +893,6 @@ class HomeScreen(Screen):
             btn = self._make_day_card(day_key, day_data)
             days_layout.add_widget(btn)
 
-        # Rest day stretch button
         rest_btn = self._make_rest_card()
         days_layout.add_widget(rest_btn)
 
@@ -994,7 +905,6 @@ class HomeScreen(Screen):
         card = ColoredBox(bg_color='card', radius=16, orientation='horizontal',
                           size_hint_y=None, height=dp(88), padding=dp(16), spacing=dp(12))
 
-        # Accent left bar
         with card.canvas.before:
             Color(*get_color_from_hex(day_data['color']))
             card._accent_bar = Rectangle()
@@ -1004,7 +914,6 @@ class HomeScreen(Screen):
             card._accent_bar.size = (dp(4), card.height - dp(24))
         card.bind(pos=update_bar, size=update_bar)
 
-        # Info
         left = BoxLayout(orientation='vertical', spacing=dp(4))
         top_row = BoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(20))
         day_lbl = Label(text=day_key.upper(), font_size=sp(11), bold=True,
@@ -1027,12 +936,9 @@ class HomeScreen(Screen):
         left.add_widget(count_lbl)
 
         card.add_widget(left)
-
-        # Chevron
         card.add_widget(Label(text=">", font_size=sp(20), bold=True, color=c('text_dim'),
                                size_hint_x=None, width=dp(20)))
 
-        # Make card tappable directly
         card.day_key = day_key
 
         def card_touch(instance, touch, dk=day_key):
@@ -1105,6 +1011,8 @@ class HomeScreen(Screen):
         app.root.current = 'menu'
 
 
+
+
 class WorkoutScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1112,24 +1020,25 @@ class WorkoutScreen(Screen):
         self.timer_remaining = 0
         self.current_exercise_idx = 0
         self.current_set = 1
-        self.phase = 'warmup'  # 'warmup' or 'workout'
+        self.phase = 'warmup'
         self.warmup_idx = 0
         self.sets_completed = 0
         self.workout_started = False
         self.paused = False
-        self.exercise_timer_paused = False
-        self.active_timer_type = None  # 'exercise' or 'rest'
-        self.active_timer_duration = 0
+        self.active_timer_type = None  # 'exercise' | 'rest' | None
 
     def on_enter(self):
         self.clear_widgets()
         app = App.get_running_app()
         self.day_key = app.current_day
-        self.day_data = WORKOUT_PLAN[self.day_key]
-        # Resolve exercises based on current equipment
-        owned = load_equipment()
-        self.day_data = dict(self.day_data)  # shallow copy
-        self.day_data['exercises'] = build_workout_for_equipment(self.day_key, owned)
+        self.owned = load_equipment()
+        base = WORKOUT_PLAN[self.day_key]
+        self.day_data = {
+            "name":      base["name"],
+            "color":     base["color"],
+            "warmup":    list(base["warmup"]),
+            "exercises": build_workout_for_equipment(self.day_key, self.owned),
+        }
         self.current_exercise_idx = 0
         self.current_set = 1
         self.phase = 'warmup'
@@ -1137,14 +1046,48 @@ class WorkoutScreen(Screen):
         self.sets_completed = 0
         self.workout_started = False
         self.paused = False
-        self.exercise_timer_paused = False
         self.active_timer_type = None
-        self.active_timer_duration = 0
         self._build()
+        if 'punching_bag' in self.owned:
+            Clock.schedule_once(self._show_warmup_choice, 0.3)
+
+    def _show_warmup_choice(self, *args):
+        content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(14))
+        content.add_widget(Label(
+            text="Punching bag detected!\nHow do you want to warm up?",
+            font_size=sp(15), color=c('text'), halign='center',
+            size_hint_y=None, height=dp(56)))
+        regular_box = ColoredBox(bg_color='surface2', radius=10, orientation='vertical',
+                                  padding=dp(12), size_hint_y=None, height=dp(54))
+        regular_box.add_widget(Label(text="Regular Warmup", font_size=sp(14), bold=True, color=c('text')))
+        regular_box.add_widget(Label(text=f"{len(self.day_data['warmup'])} movements — mobility & activation",
+                                      font_size=sp(11), color=c('text_dim')))
+        content.add_widget(regular_box)
+        bag_box = ColoredBox(bg_color='surface2', radius=10, orientation='vertical',
+                              padding=dp(12), size_hint_y=None, height=dp(54))
+        bag_box.add_widget(Label(text="Bag Warmup", font_size=sp(14), bold=True, color=c('accent')))
+        bag_box.add_widget(Label(text=f"{len(BAG_WARMUP)} rounds — footwork, combos & shadow boxing",
+                                  font_size=sp(11), color=c('text_dim')))
+        content.add_widget(bag_box)
+        btn_row = BoxLayout(size_hint_y=None, height=dp(54), spacing=dp(10))
+        regular_btn = Button(text="Regular", background_normal='', background_color=c('surface2'),
+                             color=c('text'), bold=True, font_size=sp(14))
+        bag_btn = Button(text="Bag Warmup", background_normal='', background_color=c('accent'),
+                         color=c('bg'), bold=True, font_size=sp(14))
+        btn_row.add_widget(regular_btn)
+        btn_row.add_widget(bag_btn)
+        content.add_widget(btn_row)
+        popup = Popup(title="Choose Warmup", content=content, size_hint=(0.90, None), height=dp(330),
+                      background_color=c('surface'), title_color=c('text'), separator_color=c('accent'))
+        regular_btn.bind(on_press=lambda *a: popup.dismiss())
+        def pick_bag(*a):
+            popup.dismiss()
+            self.day_data['warmup'] = list(BAG_WARMUP)
+        bag_btn.bind(on_press=pick_bag)
+        popup.open()
 
     def _build(self):
-        self.root_layout = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(12))
-
+        self.root_layout = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(10))
         with self.root_layout.canvas.before:
             Color(*c('bg'))
             self._bg = Rectangle(pos=self.root_layout.pos, size=self.root_layout.size)
@@ -1159,49 +1102,45 @@ class WorkoutScreen(Screen):
                           color=c('text_dim'), font_size=sp(14))
         back_btn.bind(on_press=self._go_back)
         topbar.add_widget(back_btn)
-
-        self.day_label = Label(
-            text=f"{self.day_key}: {self.day_data['name']}",
-            font_size=sp(16), bold=True, color=c('text'))
+        self.day_label = Label(text=f"{self.day_key}: {self.day_data['name']}",
+                               font_size=sp(16), bold=True, color=c('text'))
         topbar.add_widget(self.day_label)
         self.root_layout.add_widget(topbar)
 
         # Phase indicator
         self.phase_label = Label(text="WARM UP", font_size=sp(11), bold=True,
                                   color=get_color_from_hex(self.day_data['color']),
-                                  size_hint_y=None, height=dp(20))
+                                  size_hint_y=None, height=dp(18))
         self.root_layout.add_widget(self.phase_label)
 
         # Exercise card
-        self.exercise_card = ColoredBox(bg_color='surface', radius=20,
-                                         orientation='vertical', padding=dp(20),
-                                         spacing=dp(12), size_hint_y=None, height=dp(280))
-
-        self.ex_name_label = Label(text="", font_size=sp(22), bold=True,
+        self.exercise_card = ColoredBox(bg_color='surface', radius=20, orientation='vertical',
+                                         padding=dp(20), spacing=dp(10),
+                                         size_hint_y=None, height=dp(260))
+        self.ex_name_label = Label(text="", font_size=sp(20), bold=True,
                                     color=c('text'), halign='center', valign='middle')
         self.ex_name_label.bind(size=self.ex_name_label.setter('text_size'))
         self.exercise_card.add_widget(self.ex_name_label)
 
         self.ex_detail_label = Label(text="", font_size=sp(14), color=c('accent'),
                                       halign='center', valign='middle',
-                                      size_hint_y=None, height=dp(28))
+                                      size_hint_y=None, height=dp(26))
         self.exercise_card.add_widget(self.ex_detail_label)
 
-        self.set_label = Label(text="", font_size=sp(28), bold=True,
-                                color=c('accent'), size_hint_y=None, height=dp(40))
+        self.set_label = Label(text="", font_size=sp(26), bold=True,
+                                color=c('accent'), size_hint_y=None, height=dp(36))
         self.exercise_card.add_widget(self.set_label)
 
         self.weight_label = Label(text="", font_size=sp(13), color=c('text_dim'),
-                                   size_hint_y=None, height=dp(22))
+                                   size_hint_y=None, height=dp(20))
         self.exercise_card.add_widget(self.weight_label)
-
         self.root_layout.add_widget(self.exercise_card)
 
-        # Instruction box
-        self.instruction_scroll = ScrollView(size_hint_y=None, height=dp(100))
+        # Instruction scroll
+        self.instruction_scroll = ScrollView(size_hint_y=None, height=dp(90))
         self.instruction_label = Label(text="", font_size=sp(13), color=c('text_dim'),
                                         halign='center', valign='top',
-                                        size_hint_y=None, padding=(dp(10), dp(6)))
+                                        size_hint_y=None, padding=(dp(10), dp(4)))
         self.instruction_label.bind(texture_size=self.instruction_label.setter('size'))
         self.instruction_label.bind(width=lambda *a: setattr(
             self.instruction_label, 'text_size', (self.instruction_label.width, None)))
@@ -1209,82 +1148,122 @@ class WorkoutScreen(Screen):
         self.root_layout.add_widget(self.instruction_scroll)
 
         # Timer display
-        self.timer_box = ColoredBox(bg_color='surface2', radius=16,
-                                     orientation='vertical', padding=dp(12),
-                                     size_hint_y=None, height=dp(80))
-        self.timer_label = Label(text="", font_size=sp(36), bold=True, color=c('accent'))
-        self.timer_sub = Label(text="", font_size=sp(12), color=c('text_dim'),
-                                size_hint_y=None, height=dp(18))
+        self.timer_box = ColoredBox(bg_color='surface2', radius=16, orientation='vertical',
+                                     padding=dp(10), size_hint_y=None, height=dp(72))
+        self.timer_label = Label(text="", font_size=sp(34), bold=True, color=c('accent'))
+        self.timer_sub = Label(text="", font_size=sp(11), color=c('text_dim'),
+                                size_hint_y=None, height=dp(16))
         self.timer_box.add_widget(self.timer_label)
         self.timer_box.add_widget(self.timer_sub)
         self.root_layout.add_widget(self.timer_box)
         self.timer_box.opacity = 0
 
         # Progress bar
-        self.progress_bar = ProgressBar(max=100, value=0,
-                                         size_hint_y=None, height=dp(6))
+        self.progress_bar = ProgressBar(max=100, value=0, size_hint_y=None, height=dp(5))
         self.root_layout.add_widget(self.progress_bar)
 
-        # Workout control row: Start/Pause | Stop
-        control_row = BoxLayout(size_hint_y=None, height=dp(54), spacing=dp(10))
+        # START button — visible before workout begins
+        self.start_btn = FitButton(text="START WORKOUT", accent=True)
+        self.start_btn.bind(on_press=self._start_workout)
+        self.root_layout.add_widget(self.start_btn)
 
-        self.start_pause_btn = FitButton(text="START WORKOUT", accent=True)
-        self.start_pause_btn.bind(on_press=self._toggle_start_pause)
-        control_row.add_widget(self.start_pause_btn)
+        # ── Single clean row: Pause | Stop | Done ──
+        # Only visible after workout has started
+        self.action_row = BoxLayout(size_hint_y=None, height=dp(54), spacing=dp(10))
 
-        self.stop_btn = FitButton(text="STOP", accent=False)
-        self.stop_btn.bind(on_press=self._confirm_stop)
-        self.stop_btn.size_hint_x = 0.35
-        self.stop_btn.opacity = 0.3
-        self.stop_btn.disabled = True
-        control_row.add_widget(self.stop_btn)
-        self.root_layout.add_widget(control_row)
+        self.pause_btn = FitButton(text="PAUSE", accent=False)
+        self.pause_btn.bind(on_press=self._on_pause_btn)
 
-        # Secondary row: timer controls | set done
-        btn_row = BoxLayout(size_hint_y=None, height=dp(54), spacing=dp(8))
+        self.stop_btn_w = FitButton(text="STOP", accent=False)
+        self.stop_btn_w.bind(on_press=self._confirm_stop)
+        self.stop_btn_w.size_hint_x = 0.35
 
-        # Exercise timer controls (shown during timed exercises)
-        self.pause_exercise_btn = FitButton(text="PAUSE", accent=False)
-        self.pause_exercise_btn.bind(on_press=self._toggle_exercise_timer)
-        self.pause_exercise_btn.opacity = 0
-        self.pause_exercise_btn.disabled = True
-        self.pause_exercise_btn.size_hint_x = 0.45
-        btn_row.add_widget(self.pause_exercise_btn)
+        self.done_btn = FitButton(text="DONE", accent=True)
+        self.done_btn.bind(on_press=self._next)
 
-        self.restart_exercise_btn = FitButton(text="RESTART", accent=False)
-        self.restart_exercise_btn.bind(on_press=self._restart_exercise_timer)
-        self.restart_exercise_btn.opacity = 0
-        self.restart_exercise_btn.disabled = True
-        self.restart_exercise_btn.size_hint_x = 0.45
-        btn_row.add_widget(self.restart_exercise_btn)
-
-        # Rest timer controls (shown during rest periods)
-        self.pause_rest_btn = FitButton(text="PAUSE REST", accent=False)
-        self.pause_rest_btn.bind(on_press=self._toggle_rest_timer)
-        self.pause_rest_btn.opacity = 0
-        self.pause_rest_btn.disabled = True
-        self.pause_rest_btn.size_hint_x = 0.55
-        btn_row.add_widget(self.pause_rest_btn)
-
-        self.start_timer_btn = FitButton(text="RESTART REST", accent=False)
-        self.start_timer_btn.bind(on_press=self._start_rest_timer)
-        self.start_timer_btn.opacity = 0
-        self.start_timer_btn.disabled = True
-        self.start_timer_btn.size_hint_x = 0.55
-        btn_row.add_widget(self.start_timer_btn)
-
-        self.next_btn = FitButton(text="DONE")
-        self.next_btn.bind(on_press=self._next)
-        self.next_btn.opacity = 0.3
-        self.next_btn.disabled = True
-        btn_row.add_widget(self.next_btn)
-        self.root_layout.add_widget(btn_row)
+        self.action_row.add_widget(self.pause_btn)
+        self.action_row.add_widget(self.stop_btn_w)
+        self.action_row.add_widget(self.done_btn)
+        self.action_row.opacity = 0
+        self.action_row.disabled = True
+        self.root_layout.add_widget(self.action_row)
 
         self.add_widget(self.root_layout)
         self._refresh_display()
 
+    # ── BUTTON STATE ──────────────────────────
+    def _update_buttons(self):
+        """Single method that sets all button states based on current app state."""
+        if not self.workout_started:
+            self.start_btn.opacity = 1
+            self.start_btn.disabled = False
+            self.action_row.opacity = 0
+            self.action_row.disabled = True
+            return
+
+        # Workout is running — hide start, show action row
+        self.start_btn.opacity = 0
+        self.start_btn.disabled = True
+        self.action_row.opacity = 1
+        self.action_row.disabled = False
+
+        # Done button label
+        if self.phase == 'warmup':
+            self.done_btn.text = "DONE"
+        else:
+            ex = self.day_data['exercises']
+            if self.current_exercise_idx < len(ex) and ex[self.current_exercise_idx].get('type') == 'timed':
+                self.done_btn.text = "SKIP"
+            else:
+                self.done_btn.text = "SET DONE"
+
+        # Pause button — label reflects what is currently running
+        if self.paused:
+            self.pause_btn.text = "RESUME"
+        elif self.active_timer_type == 'rest':
+            self.pause_btn.text = "PAUSE REST"
+        elif self.active_timer_type == 'exercise':
+            self.pause_btn.text = "PAUSE"
+        else:
+            self.pause_btn.text = "PAUSE"
+
+    def _on_pause_btn(self, *args):
+        """Route pause button press to the right timer."""
+        if self.paused:
+            self._resume()
+        elif self.active_timer_type == 'rest':
+            self._toggle_rest_timer()
+        elif self.active_timer_type == 'exercise':
+            self._toggle_exercise_timer()
+        else:
+            self._toggle_start_pause()
+
+    # ── WORKOUT FLOW ──────────────────────────
+    def _start_workout(self, *args):
+        self.workout_started = True
+        self.paused = False
+        self._update_buttons()
+        self._refresh_display()
+
+    def _toggle_start_pause(self, *args):
+        if not self.workout_started:
+            self.workout_started = True
+            self.paused = False
+        elif self.paused:
+            self._resume()
+            return
+        else:
+            self.paused = True
+            self._cancel_timer()
+        self._update_buttons()
+        self._refresh_display()
+
+    def _resume(self):
+        self.paused = False
+        self._update_buttons()
+        self._refresh_display()
+
     def _refresh_display(self):
-        # Only cancel if not actively running — callers that want to cancel do so explicitly
         if not self.workout_started or self.paused:
             self._cancel_timer()
 
@@ -1302,26 +1281,12 @@ class WorkoutScreen(Screen):
             self.set_label.text = f"{self.warmup_idx + 1} of {len(warmup_list)}"
             self.weight_label.text = ""
             self.instruction_label.text = item.get('instruction', '')
-            self.next_btn.text = "DONE"
-            self.start_timer_btn.opacity = 0
-            self.start_timer_btn.disabled = True
-            self.pause_rest_btn.opacity = 0
-            self.pause_rest_btn.disabled = True
-            self.pause_exercise_btn.opacity = 0
-            self.pause_exercise_btn.disabled = True
-            self.restart_exercise_btn.opacity = 0
-            self.restart_exercise_btn.disabled = True
             self.timer_box.opacity = 0
 
             if self.workout_started and not self.paused:
                 if item.get('type') == 'timed':
-                    self.exercise_timer_paused = False
+                    self.active_timer_type = 'exercise'
                     self._start_exercise_timer(item['duration'])
-                    self.pause_exercise_btn.text = "PAUSE"
-                    self.pause_exercise_btn.opacity = 1
-                    self.pause_exercise_btn.disabled = False
-                    self.restart_exercise_btn.opacity = 1
-                    self.restart_exercise_btn.disabled = False
 
             total = len(warmup_list)
             self.progress_bar.value = (self.warmup_idx / total) * 30
@@ -1340,314 +1305,84 @@ class WorkoutScreen(Screen):
             self.set_label.text = f"Set {self.current_set} of {ex['sets']}"
             self.weight_label.text = f"{ex.get('weight', '')}"
             self.instruction_label.text = ex.get('instruction', '')
-            self.next_btn.text = "SET DONE"
+            self.timer_box.opacity = 0
 
             total_ex = len(exercises)
-            warmup_prog = 30
-            ex_prog = (self.current_exercise_idx / total_ex) * 70
-            self.progress_bar.value = warmup_prog + ex_prog
+            self.progress_bar.value = 30 + (self.current_exercise_idx / total_ex) * 70
 
             if self.workout_started and not self.paused:
                 if ex.get('type') == 'timed':
-                    self.exercise_timer_paused = False
+                    self.active_timer_type = 'exercise'
                     self._start_exercise_timer(ex.get('duration', 30))
-                    self.pause_exercise_btn.text = "PAUSE"
-                    self.pause_exercise_btn.opacity = 1
-                    self.pause_exercise_btn.disabled = False
-                    self.restart_exercise_btn.opacity = 1
-                    self.restart_exercise_btn.disabled = False
-                    self.pause_rest_btn.opacity = 0
-                    self.pause_rest_btn.disabled = True
-                    self.start_timer_btn.opacity = 0
-                    self.start_timer_btn.disabled = True
-                else:
-                    self.timer_box.opacity = 0
-                    self.pause_exercise_btn.opacity = 0
-                    self.pause_exercise_btn.disabled = True
-                    self.restart_exercise_btn.opacity = 0
-                    self.restart_exercise_btn.disabled = True
-                    self.pause_rest_btn.opacity = 0
-                    self.pause_rest_btn.disabled = True
-                    self.start_timer_btn.opacity = 0
-                    self.start_timer_btn.disabled = True
-            else:
-                self.timer_box.opacity = 0
-                self.pause_exercise_btn.opacity = 0
-                self.pause_exercise_btn.disabled = True
-                self.restart_exercise_btn.opacity = 0
-                self.restart_exercise_btn.disabled = True
-                self.pause_rest_btn.opacity = 0
-                self.pause_rest_btn.disabled = True
-                self.start_timer_btn.opacity = 0
-                self.start_timer_btn.disabled = True
 
-    def _show_warmup_complete(self):
-        """Show a full-screen transition banner between warmup and workout."""
-        self._cancel_timer()
-        self.clear_widgets()
+        self._update_buttons()
 
-        layout = BoxLayout(orientation='vertical', padding=dp(40), spacing=dp(24))
-        with layout.canvas.before:
-            Color(*c('bg'))
-            layout._bg = Rectangle(pos=layout.pos, size=layout.size)
-        layout.bind(pos=lambda *a: setattr(layout._bg, 'pos', layout.pos),
-                    size=lambda *a: setattr(layout._bg, 'size', layout.size))
-
-        layout.add_widget(Label(text="WARMUP", font_size=sp(72), size_hint_y=None, height=dp(90)))
-        layout.add_widget(Label(text="WARM UP COMPLETE",
-                                font_size=sp(24), bold=True,
-                                color=get_color_from_hex(self.day_data['color'])))
-        layout.add_widget(Label(
-            text=f"Great work. Your body is ready.\nTime to hit {self.day_data['name']}.",
-            font_size=sp(15), color=c('text_dim'),
-            halign='center', valign='middle'))
-
-        # Summary of what's coming
-        ex_count = len(self.day_data['exercises'])
-        total_sets = sum(e['sets'] for e in self.day_data['exercises'])
-        summary_box = ColoredBox(bg_color='surface', radius=16, orientation='vertical',
-                                  padding=dp(20), spacing=dp(8),
-                                  size_hint_y=None, height=dp(100))
-        summary_box.add_widget(Label(
-            text=f"{ex_count} exercises  •  {total_sets} total sets",
-            font_size=sp(16), bold=True, color=c('text')))
-        summary_box.add_widget(Label(
-            text="Rest timers will auto-start between sets",
-            font_size=sp(12), color=c('text_dim')))
-        layout.add_widget(summary_box)
-
-        layout.add_widget(Label(size_hint_y=1))  # spacer
-
-        begin_btn = FitButton(text=f"BEGIN {self.day_data['name'].upper()}")
-
-        def begin(instance):
-            self.phase = 'workout'
-            self.current_exercise_idx = 0
-            self.current_set = 1
-            self.clear_widgets()
-            self._build()
-
-        begin_btn.bind(on_press=begin)
-        layout.add_widget(begin_btn)
-
-        self.add_widget(layout)
-
-    def _toggle_start_pause(self, *args):
-        if not self.workout_started:
-            # First press — START
-            self.workout_started = True
-            self.paused = False
-            self.start_pause_btn.text = "PAUSE"
-            self.stop_btn.opacity = 1
-            self.stop_btn.disabled = False
-            self.next_btn.opacity = 1
-            self.next_btn.disabled = False
-            self._refresh_display()
-
-        elif not self.paused:
-            # Running → PAUSE
-            self.paused = True
-            self._cancel_timer()
-            self.exercise_timer_paused = False
-            self.start_pause_btn.text = "RESUME"
-            self.next_btn.opacity = 0.3
-            self.next_btn.disabled = True
-            self.pause_exercise_btn.opacity = 0
-            self.pause_exercise_btn.disabled = True
-            self.restart_exercise_btn.opacity = 0
-            self.restart_exercise_btn.disabled = True
-            self.start_timer_btn.opacity = 0
-            self.start_timer_btn.disabled = True
-            self.pause_rest_btn.opacity = 0
-            self.pause_rest_btn.disabled = True
-            if self.timer_box.opacity == 1:
-                self.timer_sub.text = "paused"
-
-        else:
-            # Paused → RESUME
-            self.paused = False
-            self.start_pause_btn.text = "PAUSE"
-            self.next_btn.opacity = 1
-            self.next_btn.disabled = False
-            if self.active_timer_type == 'exercise':
-                self.timer_box.opacity = 1
-                self.timer_sub.text = "seconds"
-                self.timer_label.color = c('accent')
-                self.timer_event = Clock.schedule_interval(self._tick_exercise, 1)
-                self.pause_exercise_btn.text = "PAUSE"
-                self.pause_exercise_btn.opacity = 1
-                self.pause_exercise_btn.disabled = False
-                self.restart_exercise_btn.opacity = 1
-                self.restart_exercise_btn.disabled = False
-            elif self.active_timer_type == 'rest':
-                self.timer_box.opacity = 1
-                self.timer_sub.text = "rest seconds"
-                self.timer_label.color = c('accent2')
-                self.timer_event = Clock.schedule_interval(self._tick_rest, 1)
-                self.pause_rest_btn.text = "PAUSE REST"
-                self.pause_rest_btn.opacity = 1
-                self.pause_rest_btn.disabled = False
-                self.start_timer_btn.opacity = 1
-                self.start_timer_btn.disabled = False
-
-    def _confirm_stop(self, *args):
-        content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(16))
-        content.add_widget(Label(
-            text="Stop this workout?\nYour progress will not be saved.",
-            font_size=sp(15), color=c('text'), halign='center'))
-
-        btn_row = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
-
-        cancel_btn = Button(text="Keep Going", background_normal='',
-                            background_color=get_color_from_hex('#2ECC71'),
-                            color=c('bg'), bold=True, font_size=sp(14))
-        stop_confirm_btn = Button(text="Stop Workout", background_normal='',
-                                   background_color=c('danger'),
-                                   color=c('text'), bold=True, font_size=sp(14))
-
-        btn_row.add_widget(cancel_btn)
-        btn_row.add_widget(stop_confirm_btn)
-        content.add_widget(btn_row)
-
-        popup = Popup(title="Stop Workout", content=content,
-                      size_hint=(0.85, None), height=dp(220),
-                      background_color=c('surface'),
-                      title_color=c('text'), separator_color=c('accent'))
-
-        cancel_btn.bind(on_press=popup.dismiss)
-        stop_confirm_btn.bind(on_press=lambda *a: [popup.dismiss(), self._stop_workout()])
-        popup.open()
-
-    def _stop_workout(self, *args):
-        self._cancel_timer()
-        self.workout_started = False
-        self.paused = False
-        self.active_timer_type = None
-        app = App.get_running_app()
-        app.root.transition = SlideTransition(direction='right')
-        app.root.current = 'home'
-
+    # ── TIMERS ────────────────────────────────
     def _start_exercise_timer(self, duration):
         self._cancel_timer()
         self.active_timer_type = 'exercise'
-        self.active_timer_duration = duration
         self.timer_remaining = duration
         self.timer_box.opacity = 1
-        self.timer_label.text = str(duration)
-        self.timer_label.color = c('accent')
-        self.timer_sub.text = "seconds"
+        self.timer_sub.text = "Exercise Timer"
+        self._tick_exercise(0)
         self.timer_event = Clock.schedule_interval(self._tick_exercise, 1)
+        self._update_buttons()
 
     def _tick_exercise(self, dt):
-        self.timer_remaining -= 1
-        self.timer_label.text = str(self.timer_remaining)
         if self.timer_remaining <= 0:
             self._cancel_timer()
             self.active_timer_type = None
-            self.exercise_timer_paused = False
-            self.timer_label.text = "DONE!"
-            self.timer_label.color = c('success')
-            self.pause_exercise_btn.opacity = 0
-            self.pause_exercise_btn.disabled = True
-            self.restart_exercise_btn.opacity = 0
-            self.restart_exercise_btn.disabled = True
-            return False
+            self._next()
+            return
+        mins, secs = divmod(self.timer_remaining, 60)
+        self.timer_label.text = f"{mins}:{secs:02d}"
+        self.timer_remaining -= 1
 
     def _toggle_exercise_timer(self, *args):
-        """Pause or resume the active exercise timer."""
-        if not self.workout_started or self.paused:
-            return
-        if not self.exercise_timer_paused:
-            # Pause it
+        if self.timer_event:
             self._cancel_timer()
-            self.exercise_timer_paused = True
-            self.pause_exercise_btn.text = "RESUME"
-            self.timer_sub.text = "paused"
+            self.active_timer_type = None
         else:
-            # Resume it
-            self.exercise_timer_paused = False
-            self.pause_exercise_btn.text = "PAUSE"
-            self.timer_label.color = c('accent')
-            self.timer_sub.text = "seconds"
-            self.timer_event = Clock.schedule_interval(self._tick_exercise, 1)
+            self._start_exercise_timer(self.timer_remaining)
+        self._update_buttons()
 
-    def _toggle_rest_timer(self, *args):
-        """Pause or resume the active rest timer."""
-        if not self.workout_started or self.paused:
-            return
-        if self.active_timer_type == 'rest' and self.timer_event:
-            # Pause it
-            self._cancel_timer()
-            self.active_timer_type = 'rest'  # keep type so resume knows what to do
-            self.pause_rest_btn.text = "RESUME REST"
-            self.timer_sub.text = "paused"
-        else:
-            # Resume it
-            self.pause_rest_btn.text = "PAUSE REST"
-            self.timer_label.color = c('accent2')
-            self.timer_sub.text = "rest seconds"
-            self.timer_event = Clock.schedule_interval(self._tick_rest, 1)
-
-    def _restart_exercise_timer(self, *args):
-        if not self.workout_started or self.paused:
-            return
-        self.exercise_timer_paused = False
-        self.pause_exercise_btn.text = "PAUSE"
-        if self.phase == 'warmup':
-            item = self.day_data['warmup'][self.warmup_idx]
-            duration = item.get('duration', 30)
-        else:
-            ex = self.day_data['exercises'][self.current_exercise_idx]
-            duration = ex.get('duration', 30)
-        self._start_exercise_timer(duration)
-
-    def _start_rest_timer(self, *args):
-        if not self.workout_started or self.paused:
-            return
-        ex = self.day_data['exercises'][self.current_exercise_idx]
-        rest = ex.get('rest', 60)
+    def _start_rest_timer(self, duration):
         self._cancel_timer()
         self.active_timer_type = 'rest'
-        self.active_timer_duration = rest
-        self.timer_remaining = rest
+        self.timer_remaining = duration
         self.timer_box.opacity = 1
-        self.timer_label.text = str(rest)
-        self.timer_label.color = c('accent2')
-        self.timer_sub.text = "rest seconds"
+        self.timer_sub.text = "Rest Timer"
+        self._tick_rest(0)
         self.timer_event = Clock.schedule_interval(self._tick_rest, 1)
-        self.pause_rest_btn.text = "PAUSE REST"
-        self.pause_rest_btn.opacity = 1
-        self.pause_rest_btn.disabled = False
+        self._update_buttons()
 
     def _tick_rest(self, dt):
-        self.timer_remaining -= 1
-        self.timer_label.text = str(self.timer_remaining)
         if self.timer_remaining <= 0:
             self._cancel_timer()
             self.active_timer_type = None
-            self.timer_label.text = "GO!"
-            self.timer_label.color = c('accent')
-            self.timer_sub.text = "rest complete"
-            self.pause_rest_btn.opacity = 0
-            self.pause_rest_btn.disabled = True
-            self.start_timer_btn.opacity = 0
-            self.start_timer_btn.disabled = True
-            return False
+            self._update_buttons()
+            return
+        mins, secs = divmod(self.timer_remaining, 60)
+        self.timer_label.text = f"{mins}:{secs:02d}"
+        self.timer_remaining -= 1
+
+    def _toggle_rest_timer(self, *args):
+        if self.timer_event:
+            self._cancel_timer()
+            self.active_timer_type = None
+        else:
+            self._start_rest_timer(self.timer_remaining)
+        self._update_buttons()
 
     def _cancel_timer(self):
         if self.timer_event:
             self.timer_event.cancel()
             self.timer_event = None
-        if hasattr(self, 'timer_label'):
-            self.timer_label.color = c('accent')
-        return True
 
+    # ── NAVIGATION ────────────────────────────
     def _next(self, *args):
-        if not self.workout_started or self.paused:
-            return
         self._cancel_timer()
         self.active_timer_type = None
-        self.exercise_timer_paused = False
 
         if self.phase == 'warmup':
             self.warmup_idx += 1
@@ -1661,73 +1396,95 @@ class WorkoutScreen(Screen):
         if self.current_set < ex['sets']:
             self.current_set += 1
             rest = ex.get('rest', 60)
+            self._start_rest_timer(rest)
             self._refresh_display()
-            # Auto-start rest timer and show pause + restart rest buttons
-            self._start_rest_timer()
-            self.start_timer_btn.opacity = 1
-            self.start_timer_btn.disabled = False
-            self.start_timer_btn.text = f"RESTART ({rest}s)"
         else:
             self.current_exercise_idx += 1
             self.current_set = 1
-            self.start_timer_btn.opacity = 0
-            self.start_timer_btn.disabled = True
-            self.pause_rest_btn.opacity = 0
-            self.pause_rest_btn.disabled = True
+            if self.current_exercise_idx < len(exercises):
+                rest = ex.get('rest', 60)
+                self._start_rest_timer(rest)
             self._refresh_display()
+
+    def _show_warmup_complete(self):
+        self._cancel_timer()
+        self.clear_widgets()
+        layout = BoxLayout(orientation='vertical', padding=dp(40), spacing=dp(24))
+        with layout.canvas.before:
+            Color(*c('bg'))
+            self._wc_bg = Rectangle(pos=layout.pos, size=layout.size)
+        layout.bind(pos=lambda *a: setattr(self._wc_bg, 'pos', layout.pos),
+                    size=lambda *a: setattr(self._wc_bg, 'size', layout.size))
+
+        layout.add_widget(Label(text="Warm Up Complete!", font_size=sp(26), bold=True, color=c('accent')))
+        layout.add_widget(Label(text="Time to work.", font_size=sp(16), color=c('text_dim')))
+
+        start_btn = FitButton(text="START WORKOUT", accent=True)
+        def begin(*a):
+            self.phase = 'workout'
+            self.current_exercise_idx = 0
+            self.current_set = 1
+            self._build()
+            self._start_workout()
+        start_btn.bind(on_press=begin)
+        layout.add_widget(start_btn)
+        self.add_widget(layout)
 
     def _workout_complete(self):
         self._cancel_timer()
-        progress = load_progress()
-        progress['total_workouts'] = progress.get('total_workouts', 0) + 1
-        progress['total_sets'] = progress.get('total_sets', 0) + self.sets_completed
-        today = str(datetime.date.today())
-        last = progress.get('last_date', '')
-        yesterday = str(datetime.date.today() - datetime.timedelta(days=1))
-        if last == yesterday:
-            progress['streak'] = progress.get('streak', 0) + 1
-        elif last != today:
-            progress['streak'] = 1
-        progress['last_date'] = today
-        completed = progress.get('completed_workouts', [])
-        completed.append({'day': self.day_key, 'date': today, 'sets': self.sets_completed})
-        progress['completed_workouts'] = completed[-30:]
-        save_progress(progress)
+        prog = load_progress()
+        prog['total_sets'] = prog.get('total_sets', 0) + self.sets_completed
+        prog['total_workouts'] = prog.get('total_workouts', 0) + 1
+        today = datetime.date.today().isoformat()
+        last = prog.get('last_date', '')
+        yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        if last == yesterday or last == today:
+            prog['streak'] = prog.get('streak', 0) + 1
+        else:
+            prog['streak'] = 1
+        prog['last_date'] = today
+        save_progress(prog)
 
         self.clear_widgets()
-        layout = BoxLayout(orientation='vertical', padding=dp(40), spacing=dp(20))
+        layout = BoxLayout(orientation='vertical', padding=dp(40), spacing=dp(24))
         with layout.canvas.before:
             Color(*c('bg'))
-            layout._bg = Rectangle(pos=layout.pos, size=layout.size)
-        layout.bind(pos=lambda *a: setattr(layout._bg, 'pos', layout.pos),
-                    size=lambda *a: setattr(layout._bg, 'size', layout.size))
+            self._done_bg = Rectangle(pos=layout.pos, size=layout.size)
+        layout.bind(pos=lambda *a: setattr(self._done_bg, 'pos', layout.pos),
+                    size=lambda *a: setattr(self._done_bg, 'size', layout.size))
 
-        layout.add_widget(Label(text="DONE", font_size=sp(64), size_hint_y=None, height=dp(80)))
-        layout.add_widget(Label(text="WORKOUT COMPLETE!", font_size=sp(26), bold=True,
-                                color=c('accent')))
-        layout.add_widget(Label(text=f"{self.day_key}: {self.day_data['name']}",
-                                font_size=sp(16), color=c('text_dim')))
-        layout.add_widget(Label(text=f"Sets completed: {self.sets_completed}",
-                                font_size=sp(18), color=c('text')))
-        layout.add_widget(Label(text=f"Streak: {progress.get('streak', 1)}",
-                                font_size=sp(18), color=c('accent2')))
+        layout.add_widget(Label(text="Workout Complete!", font_size=sp(26), bold=True, color=c('accent')))
+        layout.add_widget(Label(text=f"{self.sets_completed} sets done", font_size=sp(16), color=c('text_dim')))
+        layout.add_widget(Label(text=f"Streak: {prog['streak']} days", font_size=sp(14), color=c('accent2')))
 
-        home_btn = FitButton(text="Back to Home")
-        home_btn.bind(on_press=self._go_home)
+        home_btn = FitButton(text="BACK TO HOME", accent=True)
+        home_btn.bind(on_press=self._go_back)
         layout.add_widget(home_btn)
         self.add_widget(layout)
+
+    def _confirm_stop(self, *args):
+        content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(16))
+        content.add_widget(Label(text="Stop this workout?\nProgress will not be saved.",
+                                  font_size=sp(14), color=c('text'), halign='center'))
+        btn_row = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
+        cancel = Button(text="Keep Going", background_normal='', background_color=c('surface2'),
+                        color=c('text'), bold=True, font_size=sp(14))
+        confirm = Button(text="Stop", background_normal='', background_color=c('danger'),
+                         color=c('text'), bold=True, font_size=sp(14))
+        btn_row.add_widget(cancel)
+        btn_row.add_widget(confirm)
+        content.add_widget(btn_row)
+        popup = Popup(title="Stop Workout", content=content, size_hint=(0.88, None), height=dp(220),
+                      background_color=c('surface'), title_color=c('text'), separator_color=c('danger'))
+        cancel.bind(on_press=popup.dismiss)
+        confirm.bind(on_press=lambda *a: [popup.dismiss(), self._go_back()])
+        popup.open()
 
     def _go_back(self, *args):
         self._cancel_timer()
         app = App.get_running_app()
         app.root.transition = SlideTransition(direction='right')
         app.root.current = 'home'
-
-    def _go_home(self, *args):
-        app = App.get_running_app()
-        app.root.transition = SlideTransition(direction='right')
-        app.root.current = 'home'
-
 
 class StretchScreen(Screen):
     def __init__(self, **kwargs):
@@ -1752,7 +1509,6 @@ class StretchScreen(Screen):
             pos=lambda *a: setattr(self._bg, 'pos', self.root_layout.pos),
             size=lambda *a: setattr(self._bg, 'size', self.root_layout.size))
 
-        # Top bar
         topbar = BoxLayout(size_hint_y=None, height=dp(50))
         back_btn = Button(text="Back", size_hint_x=None, width=dp(80),
                           background_normal='', background_color=(0,0,0,0),
@@ -1763,7 +1519,6 @@ class StretchScreen(Screen):
                                 bold=True, color=c('text')))
         self.root_layout.add_widget(topbar)
 
-        # Stretch card
         self.stretch_card = ColoredBox(bg_color='surface', radius=20, orientation='vertical',
                                         padding=dp(24), spacing=dp(14),
                                         size_hint_y=None, height=dp(300))
@@ -1787,7 +1542,6 @@ class StretchScreen(Screen):
 
         self.root_layout.add_widget(self.stretch_card)
 
-        # Instruction
         inst_scroll = ScrollView(size_hint_y=None, height=dp(100))
         self.inst_label = Label(text="", font_size=sp(13), color=c('text_dim'),
                                  halign='center', valign='top', size_hint_y=None,
@@ -1830,7 +1584,7 @@ class StretchScreen(Screen):
         self.stretch_name.text = s['name']
         self.sides_label.text = "Both sides" if s.get('sides') else "Centred"
         self.timer_label.text = f"{s['duration']}s"
-        self.timer_label.color = c('accent')  # reset from green DONE state
+        self.timer_label.color = c('accent')
         self.inst_label.text = s.get('instruction', '')
         self.progress_label.text = f"{self.stretch_idx + 1} of {len(REST_DAY_STRETCHING)}"
         self.progress_bar.value = (self.stretch_idx / len(REST_DAY_STRETCHING)) * 100
@@ -1841,7 +1595,6 @@ class StretchScreen(Screen):
 
     def _start_timer(self, *args):
         if self.timer_event:
-            # Timer is running — PAUSE it
             self.timer_event.cancel()
             self.timer_event = None
             self.stretch_timer_paused = True
@@ -1849,13 +1602,11 @@ class StretchScreen(Screen):
             self.stop_btn.opacity = 1
             self.stop_btn.disabled = False
         elif self.stretch_timer_paused:
-            # Timer is paused — RESUME it
             self.stretch_timer_paused = False
             self.start_btn.text = "PAUSE"
             self.timer_label.color = c('accent')
             self.timer_event = Clock.schedule_interval(self._tick, 1)
         else:
-            # Timer not started yet — START it fresh
             s = REST_DAY_STRETCHING[self.stretch_idx]
             self.timer_remaining = s['duration']
             self.timer_label.text = str(self.timer_remaining)
@@ -1867,7 +1618,6 @@ class StretchScreen(Screen):
             self.stop_btn.disabled = False
 
     def _stop_timer(self, *args):
-        """Stop and reset — does not advance to next stretch."""
         if self.timer_event:
             self.timer_event.cancel()
             self.timer_event = None
@@ -1963,20 +1713,17 @@ class EquipmentScreen(Screen):
             font_size=sp(13), color=c('text_dim'), halign='center',
             size_hint_y=None, height=dp(22)))
 
-        # ── Location presets ──
         preset_label = Label(text="PRESETS", font_size=sp(11), bold=True,
                              color=c('accent'), halign='left', valign='middle',
                              size_hint_y=None, height=dp(24))
         preset_label.bind(size=preset_label.setter('text_size'))
         root.add_widget(preset_label)
 
-        # Store ref so we can rebuild just the preset row on save/delete
         self.preset_scroll_holder = BoxLayout(orientation='vertical',
                                               size_hint_y=None, height=dp(56))
         root.add_widget(self.preset_scroll_holder)
         self._build_preset_row()
 
-        # ── Individual toggles ──
         toggle_label = Label(text="ALL EQUIPMENT", font_size=sp(11), bold=True,
                              color=c('accent'), halign='left', valign='middle',
                              size_hint_y=None, height=dp(24))
@@ -2329,7 +2076,6 @@ class EquipmentScreen(Screen):
                 self.items_layout.add_widget(self._make_toggle_row(key, info))
 
     def _rebuild_toggles(self):
-        """Refresh all toggle rows after a preset load without full screen rebuild."""
         self._populate_toggles()
 
     def _make_toggle_row(self, key, info):
@@ -2394,7 +2140,6 @@ class MenuScreen(Screen):
         root.bind(pos=lambda *a: setattr(self._bg, 'pos', root.pos),
                   size=lambda *a: setattr(self._bg, 'size', root.size))
 
-        # ── Top bar ──
         topbar = BoxLayout(size_hint_y=None, height=dp(56), spacing=dp(10))
         back_btn = Button(text="Back", size_hint_x=None, width=dp(80),
                           background_normal='', background_color=(0,0,0,0),
@@ -2409,7 +2154,6 @@ class MenuScreen(Screen):
                             size_hint_y=None, padding=(0, dp(8)))
         content.bind(minimum_height=content.setter('height'))
 
-        # ── App info card ──
         info_card = ColoredBox(bg_color='surface', radius=16, orientation='vertical',
                                padding=dp(20), spacing=dp(6),
                                size_hint_y=None, height=dp(110))
@@ -2422,7 +2166,6 @@ class MenuScreen(Screen):
             font_size=sp(12), color=c('text_dim'), halign='center'))
         content.add_widget(info_card)
 
-        # ── Menu items ──
         menu_items = [
             ("Equipment Manager",  "Manage your gear & load location presets", self._go_equipment, c('accent2')),
             ("Changelog",          "What's new in each version",              self._show_changelog, c('accent')),
@@ -2491,7 +2234,6 @@ class MenuScreen(Screen):
         log_layout.bind(minimum_height=log_layout.setter('height'))
 
         for entry in CHANGELOG:
-            # ── Card with dynamic height ──
             card = ColoredBox(bg_color='surface', radius=14, orientation='vertical',
                               size_hint_y=None, padding=dp(16), spacing=dp(8))
             card.bind(minimum_height=card.setter('height'))
@@ -2506,7 +2248,6 @@ class MenuScreen(Screen):
             card.add_widget(header_row)
 
             for change in entry['changes']:
-                # ── FIX: Label auto-sizes its height based on rendered texture ──
                 change_label = Label(
                     text="•  " + change, font_size=sp(12), color=c('text'),
                     halign='left', valign='top', size_hint_y=None)
